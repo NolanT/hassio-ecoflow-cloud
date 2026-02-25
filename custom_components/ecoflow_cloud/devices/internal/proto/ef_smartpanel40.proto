@@ -1,12 +1,12 @@
 syntax = "proto3";
 
 // pdata for cmd_func=254, cmd_id=21  (Smart Panel 40 property upload)
-// Field numbers reverse-engineered from live MQTT captures (HR61ZA1* devices).
+// Field numbers sourced from DevAplComm.java (decompiled EcoFlow 6.11.0 app).
 
 // Per-circuit real-time measurement  (fields 1015 – 1054)
 message ChannelSampleInfo {
   float voltage      = 1;   // Line voltage (V)
-  float reactive_pwr = 2;   // Reactive power (VAR) — signed, optional
+  float reactive_pwr = 2;   // Reactive power (VAR) — signed
   float current      = 3;   // Current (A)
 }
 
@@ -22,20 +22,37 @@ message ChannelStatus {
 }
 
 message SmartPanel40Status {
-  // System / grid
-  string utc_timezone_id          = 134;
-  float  pow_get_sys_load         = 516;  // Total home load (W)
-  float  pow_get_bp_cms           = 518;  // Inverter/battery power (W)
+  // ── System power ──────────────────────────────────────────────────────────
+  float  pcl_pwr_offset           = 53;   // Total grid power, W (negative = export)
+  string utc_timezone_id          = 134;  // Timezone string
+  float  pow_get_sys_load         = 516;  // Total home load, W
+  float  pow_get_pv_sum           = 517;  // Total PV power, W
+  float  pow_get_bp_cms           = 518;  // Battery/inverter power, W (positive = charging)
 
-  // Grid phase measurements
-  float  grid_connection_vol_l1   = 956;  // Grid voltage L1 (V)
-  float  grid_connection_vol_l2   = 957;  // Grid voltage L2 (V)
-  float  grid_connection_amp_l1   = 958;  // Grid current L1 (A)
-  float  grid_connection_amp_l2   = 959;  // Grid current L2 (A)
-  float  grid_connection_power_l1 = 962;  // Grid power L1 (W)
-  float  grid_connection_power_l2 = 963;  // Grid power L2 (W)
+  // ── CMS Battery (mirrored from OceanPro) ──────────────────────────────────
+  int32  cms_chg_rem_time         = 269;  // Charge remaining time, seconds
+  int32  cms_batt_store_energy    = 1682; // Current stored energy, Wh
+  int32  cms_batt_pow_in_remain   = 1462; // Remaining charge power, W
 
-  // Circuit status / config (40 circuits)
+  // ── Grid phase measurements ───────────────────────────────────────────────
+  float  grid_connection_vol_l1           = 956;  // Grid voltage L1, V
+  float  grid_connection_vol_l2           = 957;  // Grid voltage L2, V
+  float  grid_connection_amp_l1           = 958;  // Grid current L1, A
+  float  grid_connection_amp_l2           = 959;  // Grid current L2, A
+  float  grid_connection_freq_l1          = 960;  // Grid frequency L1, Hz
+  float  grid_connection_freq_l2          = 961;  // Grid frequency L2, Hz
+  float  grid_connection_power_l1         = 962;  // Grid active power L1, W (negative = export)
+  float  grid_connection_power_l2         = 963;  // Grid active power L2, W (negative = export)
+  float  grid_connection_reactive_power_l1 = 964; // Grid reactive power L1, VAR
+  float  grid_connection_reactive_power_l2 = 965; // Grid reactive power L2, VAR
+  float  grid_connection_apparent_power_l1 = 966; // Grid apparent power L1, VA
+  float  grid_connection_apparent_power_l2 = 967; // Grid apparent power L2, VA
+
+  // ── Panel bus voltage ─────────────────────────────────────────────────────
+  float  panel_bus_vol_l1         = 1063; // Panel bus voltage L1, V
+  float  panel_bus_vol_l2         = 1064; // Panel bus voltage L2, V
+
+  // ── Circuit status / config (40 circuits, fields 794–833) ─────────────────
   ChannelStatus load_ch1_sta   = 794;
   ChannelStatus load_ch2_sta   = 795;
   ChannelStatus load_ch3_sta   = 796;
@@ -77,7 +94,7 @@ message SmartPanel40Status {
   ChannelStatus load_ch39_sta  = 832;
   ChannelStatus load_ch40_sta  = 833;
 
-  // Circuit real-time measurements (40 circuits)
+  // ── Circuit real-time measurements (40 circuits, fields 1015–1054) ─────────
   ChannelSampleInfo load_ch1_sample_info   = 1015;
   ChannelSampleInfo load_ch2_sample_info   = 1016;
   ChannelSampleInfo load_ch3_sample_info   = 1017;

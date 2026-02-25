@@ -4,7 +4,7 @@ EcoFlow Smart Electrical Panel 40 (EF-SHP-40) — internal (private API) device.
 MQTT payload format: repeated Header protobuf envelope, pdata decoded as
 SmartPanel40Status (cmd_func=254, cmd_id=21).
 
-Field numbers reverse-engineered from live captures against device SN HR61ZA1*.
+Field numbers sourced from DevAplComm.java (decompiled EcoFlow 6.11.0 app).
 """
 
 from __future__ import annotations
@@ -27,8 +27,10 @@ from custom_components.ecoflow_cloud.devices.internal.proto import ef_smartmeter
 from custom_components.ecoflow_cloud.devices.internal.proto import ef_smartpanel40_pb2
 from custom_components.ecoflow_cloud.sensor import (
     AmpSensorEntity,
+    FrequencySensorEntity,
     MiscSensorEntity,
     QuotaStatusSensorEntity,
+    SecondsRemainSensorEntity,
     VoltSensorEntity,
     WattsSensorEntity,
 )
@@ -41,11 +43,12 @@ _NUM_CIRCUITS = 40
 
 
 def _circuit_key(i: int, field: str) -> str:
-    """Return the flattened params key for circuit i (1-based)."""
+    """Return the flattened params key for circuit i (1-based), sample info."""
     return f"{_CMD_FUNC}_{_CMD_STATUS}.loadCh{i}SampleInfo.{field}"
 
 
 def _circuit_cfg_key(i: int, field: str) -> str:
+    """Return the flattened params key for circuit i (1-based), status/config."""
     return f"{_CMD_FUNC}_{_CMD_STATUS}.loadCh{i}Sta.{field}"
 
 
@@ -55,27 +58,91 @@ class SmartPanel40(BaseInternalDevice):
     def sensors(self, client: EcoflowApiClient) -> list[SensorEntity]:
         pf = f"{_CMD_FUNC}_{_CMD_STATUS}"
         entities: list[SensorEntity] = [
-            # Total home load
+            # ── System power ─────────────────────────────────────────────────
             WattsSensorEntity(client, self, f"{pf}.powGetSysLoad", "Home Load"),
+            WattsSensorEntity(client, self, f"{pf}.powGetPvSum", "PV Power"),
+            WattsSensorEntity(client, self, f"{pf}.powGetBpCms", "Battery Power"),
 
-            # Grid per-phase
-            VoltSensorEntity(client, self, f"{pf}.gridConnectionVolL1", "Grid Voltage L1"),
-            VoltSensorEntity(client, self, f"{pf}.gridConnectionVolL2", "Grid Voltage L2"),
-            AmpSensorEntity(client, self, f"{pf}.gridConnectionAmpL1", "Grid Current L1"),
-            AmpSensorEntity(client, self, f"{pf}.gridConnectionAmpL2", "Grid Current L2"),
-            WattsSensorEntity(client, self, f"{pf}.gridConnectionPowerL1", "Grid Power L1"),
-            WattsSensorEntity(client, self, f"{pf}.gridConnectionPowerL2", "Grid Power L2"),
-
-            # Computed total grid power (stored by _prepare_data)
+            # Computed total grid power (L1 + L2, stored by _prepare_data)
             WattsSensorEntity(client, self, f"{pf}.grid_power_total", "Grid Power Total"),
 
-            # Timezone info
-            MiscSensorEntity(client, self, f"{pf}.utcTimezoneId", "Timezone", enabled=False),
+            # ── Battery (mirrored from OceanPro) ─────────────────────────────
+            MiscSensorEntity(client, self, f"{pf}.cmsBattStoreEnergy", "Stored Energy (Wh)"),
+            SecondsRemainSensorEntity(
+                client, self, f"{pf}.cmsChgRemTime", "Charge Time Remaining",
+                enabled=False,
+            ),
+
+            # ── Grid phase (L1 / L2) ─────────────────────────────────────────
+            VoltSensorEntity(
+                client, self, f"{pf}.gridConnectionVolL1", "Grid Voltage L1",
+                enabled=False,
+            ),
+            VoltSensorEntity(
+                client, self, f"{pf}.gridConnectionVolL2", "Grid Voltage L2",
+                enabled=False,
+            ),
+            AmpSensorEntity(
+                client, self, f"{pf}.gridConnectionAmpL1", "Grid Current L1",
+                enabled=False,
+            ),
+            AmpSensorEntity(
+                client, self, f"{pf}.gridConnectionAmpL2", "Grid Current L2",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.gridConnectionPowerL1", "Grid Power L1",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.gridConnectionPowerL2", "Grid Power L2",
+                enabled=False,
+            ),
+            FrequencySensorEntity(
+                client, self, f"{pf}.gridConnectionFreqL1", "Grid Frequency L1",
+                enabled=False,
+            ),
+            FrequencySensorEntity(
+                client, self, f"{pf}.gridConnectionFreqL2", "Grid Frequency L2",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.gridConnectionReactivePowerL1", "Grid Reactive Power L1",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.gridConnectionReactivePowerL2", "Grid Reactive Power L2",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.gridConnectionApparentPowerL1", "Grid Apparent Power L1",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.gridConnectionApparentPowerL2", "Grid Apparent Power L2",
+                enabled=False,
+            ),
+
+            # ── Panel bus voltage ────────────────────────────────────────────
+            VoltSensorEntity(
+                client, self, f"{pf}.panelBusVolL1", "Panel Bus Voltage L1",
+                enabled=False,
+            ),
+            VoltSensorEntity(
+                client, self, f"{pf}.panelBusVolL2", "Panel Bus Voltage L2",
+                enabled=False,
+            ),
+
+            # ── Timezone / misc ──────────────────────────────────────────────
+            MiscSensorEntity(
+                client, self, f"{pf}.utcTimezoneId", "Timezone",
+                enabled=False,
+            ),
 
             self._status_sensor(client),
         ]
 
-        # Per-circuit sensors (enabled=False by default — user can enable in HA)
+        # ── Per-circuit sensors (40 circuits, all disabled by default) ────────
         for i in range(1, _NUM_CIRCUITS + 1):
             entities.extend([
                 VoltSensorEntity(
@@ -89,6 +156,10 @@ class SmartPanel40(BaseInternalDevice):
                 WattsSensorEntity(
                     client, self, _circuit_key(i, "apparent_pwr"),
                     f"Circuit {i} Power", enabled=False,
+                ),
+                WattsSensorEntity(
+                    client, self, _circuit_key(i, "reactivePwr"),
+                    f"Circuit {i} Reactive Power", enabled=False,
                 ),
                 MiscSensorEntity(
                     client, self, _circuit_cfg_key(i, "name"),
@@ -154,7 +225,8 @@ class SmartPanel40(BaseInternalDevice):
                             float(p_l1) + float(p_l2), 1
                         )
 
-                    # Compute per-circuit apparent power (V × I)
+                    # Compute per-circuit apparent power (V × I) when device
+                    # doesn't send apparent_pwr directly
                     for i in range(1, _NUM_CIRCUITS + 1):
                         camel = f"loadCh{i}SampleInfo"
                         v_key = f"{prefix}.{camel}.voltage"
