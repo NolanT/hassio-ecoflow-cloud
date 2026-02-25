@@ -5,7 +5,7 @@ MQTT payload format: repeated Header protobuf envelope (same outer structure as
 SmartMeter), with pdata decoded as OceanProStatus (cmd_func=254, cmd_id=21)
 or OceanProSysInfo (cmd_func=254, cmd_id=25).
 
-Field numbers reverse-engineered from live captures against device SN HR51ZA1*.
+Field numbers sourced from DevAplComm.java (decompiled EcoFlow 6.11.0 app).
 """
 
 from __future__ import annotations
@@ -28,9 +28,14 @@ from custom_components.ecoflow_cloud.devices.internal.proto import ef_smartmeter
 from custom_components.ecoflow_cloud.devices.internal.proto import ef_oceanpro_pb2
 from custom_components.ecoflow_cloud.sensor import (
     AmpSensorEntity,
+    CelsiusSensorEntity,
+    ChargingStateSensorEntity,
+    CyclesSensorEntity,
+    EnergySensorEntity,
     LevelSensorEntity,
     MiscSensorEntity,
     QuotaStatusSensorEntity,
+    SecondsRemainSensorEntity,
     VoltSensorEntity,
     WattsSensorEntity,
 )
@@ -47,37 +52,114 @@ class OceanPro(BaseInternalDevice):
 
     @override
     def sensors(self, client: EcoflowApiClient) -> list[SensorEntity]:
-        pf = f"{_CMD_FUNC}_{_CMD_STATUS}"  # "254_21"
+        pf = f"{_CMD_FUNC}_{_CMD_STATUS}"   # "254_21"
+        sh = f"{_CMD_FUNC}_{_CMD_SYSINFO}"  # "254_25"
         return [
-            # Home load
+            # ── System power ─────────────────────────────────────────────────
             WattsSensorEntity(client, self, f"{pf}.powGetSysLoad", "Home Load"),
-
-            # Grid power (negative = exporting to grid)
             WattsSensorEntity(client, self, f"{pf}.pclPwrOffset", "Grid Power"),
+            WattsSensorEntity(client, self, f"{pf}.powGetBpCms", "Battery Power"),
 
-            # Battery SoC — raw value ÷ 10 is done in _prepare_data
-            LevelSensorEntity(client, self, f"{pf}.battery_soc", "Battery SoC"),
+            # ── PV (from short heartbeat) ────────────────────────────────────
+            WattsSensorEntity(client, self, f"{sh}.pvPwr", "PV Power"),
 
-            # Phase L1
-            VoltSensorEntity(client, self, f"{pf}.gridVolL1", "Grid Voltage L1"),
-            AmpSensorEntity(client, self, f"{pf}.gridAmpL1", "Grid Current L1"),
-            WattsSensorEntity(client, self, f"{pf}.gridPowL1", "Grid Power L1"),
+            # ── Battery ───────────────────────────────────────────────────────
+            LevelSensorEntity(client, self, f"{pf}.cmsBattSoc", "Battery SoC"),
+            LevelSensorEntity(
+                client, self, f"{pf}.cmsBattSoh", "Battery Health",
+                enabled=False,
+            ),
+            ChargingStateSensorEntity(
+                client, self, f"{pf}.cmsChgDsgState", "Charge/Discharge State",
+            ),
+            MiscSensorEntity(client, self, f"{pf}.cmsBattStoreEnergy", "Stored Energy (Wh)"),
+            MiscSensorEntity(
+                client, self, f"{pf}.cmsBattRatedEnergy", "Rated Capacity (Wh)",
+                enabled=False,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.cmsBattFullEnergy", "Usable Capacity (Wh)",
+                enabled=False,
+            ),
+            VoltSensorEntity(
+                client, self, f"{pf}.cmsBattVol", "Battery Voltage",
+                enabled=False,
+            ),
+            AmpSensorEntity(
+                client, self, f"{pf}.cmsBattAmp", "Battery Current",
+                enabled=False,
+            ),
+            CelsiusSensorEntity(
+                client, self, f"{pf}.cmsBattTemp", "Battery Temperature",
+                enabled=False,
+            ),
+            SecondsRemainSensorEntity(
+                client, self, f"{pf}.cmsDsgRemTime", "Discharge Time Remaining",
+                enabled=False,
+            ),
+            SecondsRemainSensorEntity(
+                client, self, f"{pf}.cmsChgRemTime", "Charge Time Remaining",
+                enabled=False,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.cmsMaxChgSoc", "Max Charge SoC",
+                enabled=False,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.cmsMinDsgSoc", "Min Discharge SoC",
+                enabled=False,
+            ),
+            CyclesSensorEntity(
+                client, self, f"{pf}.cmsBattCycleNum", "Battery Cycles",
+                enabled=False,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.cmsBpOnlineCnt", "Battery Packs Online",
+                enabled=False,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.cmsBpRunningCnt", "Battery Packs Running",
+                enabled=False,
+            ),
+            EnergySensorEntity(
+                client, self, f"{pf}.cmsEnergyInSum", "Lifetime Energy Charged",
+                enabled=False,
+            ),
+            EnergySensorEntity(
+                client, self, f"{pf}.cmsEnergyOutSum", "Lifetime Energy Discharged",
+                enabled=False,
+            ),
 
-            # Phase L2
-            VoltSensorEntity(client, self, f"{pf}.gridVolL2", "Grid Voltage L2"),
-            AmpSensorEntity(client, self, f"{pf}.gridAmpL2", "Grid Current L2"),
-            WattsSensorEntity(client, self, f"{pf}.gridPowL2", "Grid Power L2"),
-
-            # Short heartbeat sensors (cmd_id=25) — disabled by default
-            WattsSensorEntity(
-                client, self,
-                f"{_CMD_FUNC}_{_CMD_SYSINFO}.pvPwr",
-                "PV Power (heartbeat)",
+            # ── Grid phase sensors (disabled by default) ──────────────────────
+            VoltSensorEntity(
+                client, self, f"{pf}.gridVolL1", "Grid Voltage L1",
+                enabled=False,
+            ),
+            AmpSensorEntity(
+                client, self, f"{pf}.gridAmpL1", "Grid Current L1",
                 enabled=False,
             ),
             WattsSensorEntity(
+                client, self, f"{pf}.gridPowL1", "Grid Power L1",
+                enabled=False,
+            ),
+            VoltSensorEntity(
+                client, self, f"{pf}.gridVolL2", "Grid Voltage L2",
+                enabled=False,
+            ),
+            AmpSensorEntity(
+                client, self, f"{pf}.gridAmpL2", "Grid Current L2",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.gridPowL2", "Grid Power L2",
+                enabled=False,
+            ),
+
+            # ── Short heartbeat (disabled by default) ────────────────────────
+            WattsSensorEntity(
                 client, self,
-                f"{_CMD_FUNC}_{_CMD_SYSINFO}.sysLoadPwr",
+                f"{sh}.sysLoadPwr",
                 "System Load (heartbeat)",
                 enabled=False,
             ),
@@ -106,7 +188,7 @@ class OceanPro(BaseInternalDevice):
 
             for message in packet.msg:
                 cmd_func = message.cmd_func
-                cmd_id = message.cmd_id
+                cmd_id   = message.cmd_id
                 _LOGGER.debug(
                     "OceanPro cmd_func=%s cmd_id=%s pdata=%s",
                     cmd_func, cmd_id, message.pdata.hex(),
@@ -134,11 +216,6 @@ class OceanPro(BaseInternalDevice):
                     raw = MessageToDict(payload, preserving_proto_field_name=False)
                     for k, v in flatten_dict(raw).items():
                         params[f"{prefix}.{k}"] = v
-
-                    # Derive a scaled battery SoC (raw field 268 = soc × 10)
-                    raw_soc = raw.get("batterySocX10")
-                    if raw_soc is not None:
-                        params[f"{prefix}.battery_soc"] = round(int(raw_soc) / 10.0, 1)
 
                 elif cmd_func == _CMD_FUNC and cmd_id == _CMD_SYSINFO:
                     payload = ef_oceanpro_pb2.OceanProSysInfo()
