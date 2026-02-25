@@ -59,9 +59,26 @@ class OceanPro(BaseInternalDevice):
             WattsSensorEntity(client, self, f"{pf}.powGetSysLoad", "Home Load"),
             WattsSensorEntity(client, self, f"{pf}.pclPwrOffset", "Grid Power"),
             WattsSensorEntity(client, self, f"{pf}.powGetBpCms", "Battery Power"),
+            WattsSensorEntity(client, self, f"{pf}.powGetPvSum", "PV Power"),
+
+            # ── PV strings (per-MPPT, enabled by default) ────────────────────
+            WattsSensorEntity(client, self, f"{pf}.dtPvPwrCurrent", "PV String 1"),
+            WattsSensorEntity(client, self, f"{pf}.dtPv2PwrCurrent", "PV String 2"),
+            WattsSensorEntity(client, self, f"{pf}.dtPv3PwrCurrent", "PV String 3"),
+            WattsSensorEntity(client, self, f"{pf}.dtPv4PwrCurrent", "PV String 4"),
+            WattsSensorEntity(client, self, f"{pf}.dtPv5PwrCurrent", "PV String 5"),
+            WattsSensorEntity(client, self, f"{pf}.dtPv6PwrCurrent", "PV String 6"),
+            WattsSensorEntity(
+                client, self, f"{pf}.dtPv7PwrCurrent", "PV String 7",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.dtPv8PwrCurrent", "PV String 8",
+                enabled=False,
+            ),
 
             # ── PV (from short heartbeat) ────────────────────────────────────
-            WattsSensorEntity(client, self, f"{sh}.pvPwr", "PV Power"),
+            WattsSensorEntity(client, self, f"{sh}.pvPwr", "PV Power (heartbeat)", enabled=False),
 
             # ── Battery ───────────────────────────────────────────────────────
             LevelSensorEntity(client, self, f"{pf}.cmsBattSoc", "Battery SoC"),
@@ -153,6 +170,52 @@ class OceanPro(BaseInternalDevice):
             ),
             WattsSensorEntity(
                 client, self, f"{pf}.gridPowL2", "Grid Power L2",
+                enabled=False,
+            ),
+
+            # ── Load source breakdown (disabled by default) ──────────────────
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetSysLoadFromPv", "Home Load from PV",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetSysLoadFromBp", "Home Load from Battery",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetSysLoadFromGrid", "Home Load from Grid",
+                enabled=False,
+            ),
+
+            # ── Generator (disabled by default) ──────────────────────────────
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetStandbyGenerator", "Standby Generator Power",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetPortableGenerator", "Portable Generator Power",
+                enabled=False,
+            ),
+
+            # ── Device temperatures (disabled by default) ─────────────────────
+            CelsiusSensorEntity(
+                client, self, f"{pf}.devTemperature1", "Device Temperature 1",
+                enabled=False,
+            ),
+            CelsiusSensorEntity(
+                client, self, f"{pf}.devTemperature2", "Device Temperature 2",
+                enabled=False,
+            ),
+            CelsiusSensorEntity(
+                client, self, f"{pf}.devTemperature3", "Inverter Temperature",
+                enabled=False,
+            ),
+            CelsiusSensorEntity(
+                client, self, f"{pf}.devTemperature4", "Device Temperature 4",
+                enabled=False,
+            ),
+            CelsiusSensorEntity(
+                client, self, f"{pf}.devTemperature5", "Device Temperature 5",
                 enabled=False,
             ),
 

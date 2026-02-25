@@ -27,6 +27,7 @@ from custom_components.ecoflow_cloud.devices.internal.proto import ef_smartmeter
 from custom_components.ecoflow_cloud.devices.internal.proto import ef_smartpanel40_pb2
 from custom_components.ecoflow_cloud.sensor import (
     AmpSensorEntity,
+    CelsiusSensorEntity,
     FrequencySensorEntity,
     MiscSensorEntity,
     QuotaStatusSensorEntity,
@@ -65,6 +66,22 @@ class SmartPanel40(BaseInternalDevice):
 
             # Computed total grid power (L1 + L2, stored by _prepare_data)
             WattsSensorEntity(client, self, f"{pf}.grid_power_total", "Grid Power Total"),
+
+            # ── PV strings (per-MPPT, enabled by default) ────────────────────
+            WattsSensorEntity(client, self, f"{pf}.dtPvPwrCurrent", "PV String 1"),
+            WattsSensorEntity(client, self, f"{pf}.dtPv2PwrCurrent", "PV String 2"),
+            WattsSensorEntity(client, self, f"{pf}.dtPv3PwrCurrent", "PV String 3"),
+            WattsSensorEntity(client, self, f"{pf}.dtPv4PwrCurrent", "PV String 4"),
+            WattsSensorEntity(client, self, f"{pf}.dtPv5PwrCurrent", "PV String 5"),
+            WattsSensorEntity(client, self, f"{pf}.dtPv6PwrCurrent", "PV String 6"),
+            WattsSensorEntity(
+                client, self, f"{pf}.dtPv7PwrCurrent", "PV String 7",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.dtPv8PwrCurrent", "PV String 8",
+                enabled=False,
+            ),
 
             # ── Battery (mirrored from OceanPro) ─────────────────────────────
             MiscSensorEntity(client, self, f"{pf}.cmsBattStoreEnergy", "Stored Energy (Wh)"),
@@ -130,6 +147,52 @@ class SmartPanel40(BaseInternalDevice):
             ),
             VoltSensorEntity(
                 client, self, f"{pf}.panelBusVolL2", "Panel Bus Voltage L2",
+                enabled=False,
+            ),
+
+            # ── Load source breakdown (disabled by default) ──────────────────
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetSysLoadFromPv", "Home Load from PV",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetSysLoadFromBp", "Home Load from Battery",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetSysLoadFromGrid", "Home Load from Grid",
+                enabled=False,
+            ),
+
+            # ── Generator (disabled by default) ──────────────────────────────
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetStandbyGenerator", "Standby Generator Power",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetPortableGenerator", "Portable Generator Power",
+                enabled=False,
+            ),
+
+            # ── Device temperatures (disabled by default) ─────────────────────
+            CelsiusSensorEntity(
+                client, self, f"{pf}.devTemperature1", "Device Temperature 1",
+                enabled=False,
+            ),
+            CelsiusSensorEntity(
+                client, self, f"{pf}.devTemperature2", "Device Temperature 2",
+                enabled=False,
+            ),
+            CelsiusSensorEntity(
+                client, self, f"{pf}.devTemperature3", "Inverter Temperature",
+                enabled=False,
+            ),
+            CelsiusSensorEntity(
+                client, self, f"{pf}.devTemperature4", "Device Temperature 4",
+                enabled=False,
+            ),
+            CelsiusSensorEntity(
+                client, self, f"{pf}.devTemperature5", "Device Temperature 5",
                 enabled=False,
             ),
 
@@ -224,6 +287,16 @@ class SmartPanel40(BaseInternalDevice):
                         params[f"{prefix}.grid_power_total"] = round(
                             float(p_l1) + float(p_l2), 1
                         )
+
+                    # Convert grid frequency period (μs) → Hz
+                    # Fields 960/961 contain period in microseconds; Hz = 1_000_000 / period
+                    for phase, camel_period, camel_hz in (
+                        ("L1", "gridConnectionFreqPeriodL1", "gridConnectionFreqL1"),
+                        ("L2", "gridConnectionFreqPeriodL2", "gridConnectionFreqL2"),
+                    ):
+                        period = float(params.get(f"{prefix}.{camel_period}") or 0.0)
+                        if period > 0:
+                            params[f"{prefix}.{camel_hz}"] = round(1_000_000.0 / period, 3)
 
                     # Compute per-circuit apparent power (V × I) when device
                     # doesn't send apparent_pwr directly

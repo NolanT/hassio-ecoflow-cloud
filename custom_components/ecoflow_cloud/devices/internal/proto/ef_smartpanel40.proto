@@ -5,17 +5,17 @@ syntax = "proto3";
 
 // Per-circuit real-time measurement  (fields 1015 – 1054)
 message ChannelSampleInfo {
-  float voltage      = 1;   // Line voltage (V)
-  float reactive_pwr = 2;   // Reactive power (VAR) — signed
-  float current      = 3;   // Current (A)
+  float voltage      = 1;   // Line voltage, V
+  float reactive_pwr = 2;   // Reactive power, VAR (signed)
+  float current      = 3;   // Current, A
 }
 
 // Per-circuit configuration / status  (fields 794 – 833)
 message ChannelStatus {
   int32  enabled   = 1;  // 1 = enabled
   bytes  ev_config = 2;  // EV-charger sub-config (optional)
-  float  max_amps  = 3;  // Breaker rating (A), e.g. 20.0
-  int32  position  = 4;  // Breaker position / slot number
+  float  max_amps  = 3;  // Breaker rating, A (e.g. 20.0)
+  int32  position  = 4;  // Breaker slot number
   string name      = 5;  // User-assigned circuit name
   int32  flag      = 6;  // Misc flag (e.g. 1 = double-pole)
   bytes  index     = 7;  // Index bytes
@@ -29,28 +29,55 @@ message SmartPanel40Status {
   float  pow_get_pv_sum           = 517;  // Total PV power, W
   float  pow_get_bp_cms           = 518;  // Battery/inverter power, W (positive = charging)
 
+  // ── Load source breakdown ─────────────────────────────────────────────────
+  float  pow_get_sys_load_from_pv   = 1002; // Home load sourced from PV, W
+  float  pow_get_sys_load_from_bp   = 1003; // Home load sourced from battery, W
+  float  pow_get_sys_load_from_grid = 1004; // Home load sourced from grid, W
+
+  // ── Generator ────────────────────────────────────────────────────────────
+  float  pow_get_standby_generator  = 781;  // Standby generator power, W
+  float  pow_get_portable_generator = 782;  // Portable generator power, W
+
   // ── CMS Battery (mirrored from OceanPro) ──────────────────────────────────
   int32  cms_chg_rem_time         = 269;  // Charge remaining time, seconds
   int32  cms_batt_store_energy    = 1682; // Current stored energy, Wh
   int32  cms_batt_pow_in_remain   = 1462; // Remaining charge power, W
 
   // ── Grid phase measurements ───────────────────────────────────────────────
-  float  grid_connection_vol_l1           = 956;  // Grid voltage L1, V
-  float  grid_connection_vol_l2           = 957;  // Grid voltage L2, V
-  float  grid_connection_amp_l1           = 958;  // Grid current L1, A
-  float  grid_connection_amp_l2           = 959;  // Grid current L2, A
-  float  grid_connection_freq_l1          = 960;  // Grid frequency L1, Hz
-  float  grid_connection_freq_l2          = 961;  // Grid frequency L2, Hz
-  float  grid_connection_power_l1         = 962;  // Grid active power L1, W (negative = export)
-  float  grid_connection_power_l2         = 963;  // Grid active power L2, W (negative = export)
-  float  grid_connection_reactive_power_l1 = 964; // Grid reactive power L1, VAR
-  float  grid_connection_reactive_power_l2 = 965; // Grid reactive power L2, VAR
-  float  grid_connection_apparent_power_l1 = 966; // Grid apparent power L1, VA
-  float  grid_connection_apparent_power_l2 = 967; // Grid apparent power L2, VA
+  float  grid_connection_vol_l1            = 956;  // Grid voltage L1, V
+  float  grid_connection_vol_l2            = 957;  // Grid voltage L2, V
+  float  grid_connection_amp_l1            = 958;  // Grid current L1, A
+  float  grid_connection_amp_l2            = 959;  // Grid current L2, A
+  // Fields 960/961: period in microseconds (Hz = 1_000_000 / value); converted in _prepare_data
+  float  grid_connection_freq_period_l1    = 960;  // Grid period L1, μs (raw)
+  float  grid_connection_freq_period_l2    = 961;  // Grid period L2, μs (raw)
+  float  grid_connection_power_l1          = 962;  // Grid active power L1, W (negative = export)
+  float  grid_connection_power_l2          = 963;  // Grid active power L2, W (negative = export)
+  float  grid_connection_reactive_power_l1 = 964;  // Grid reactive power L1, VAR
+  float  grid_connection_reactive_power_l2 = 965;  // Grid reactive power L2, VAR
+  float  grid_connection_apparent_power_l1 = 966;  // Grid apparent power L1, VA
+  float  grid_connection_apparent_power_l2 = 967;  // Grid apparent power L2, VA
 
   // ── Panel bus voltage ─────────────────────────────────────────────────────
   float  panel_bus_vol_l1         = 1063; // Panel bus voltage L1, V
   float  panel_bus_vol_l2         = 1064; // Panel bus voltage L2, V
+
+  // ── Per-MPPT PV string power (up to 8 strings) ────────────────────────────
+  float  dt_pv_pwr_current        = 1476; // PV string 1 power, W
+  float  dt_pv2_pwr_current       = 1477; // PV string 2 power, W
+  float  dt_pv3_pwr_current       = 1478; // PV string 3 power, W
+  float  dt_pv4_pwr_current       = 1479; // PV string 4 power, W
+  float  dt_pv5_pwr_current       = 1480; // PV string 5 power, W
+  float  dt_pv6_pwr_current       = 1481; // PV string 6 power, W
+  float  dt_pv7_pwr_current       = 1482; // PV string 7 power, W
+  float  dt_pv8_pwr_current       = 1483; // PV string 8 power, W
+
+  // ── Device temperatures ───────────────────────────────────────────────────
+  float  dev_temperature_1        = 1553; // Device temperature 1, °C
+  float  dev_temperature_2        = 1554; // Device temperature 2, °C
+  float  dev_temperature_3        = 1555; // Device temperature 3, °C (inverter)
+  float  dev_temperature_4        = 1556; // Device temperature 4, °C
+  float  dev_temperature_5        = 1557; // Device temperature 5, °C
 
   // ── Circuit status / config (40 circuits, fields 794–833) ─────────────────
   ChannelStatus load_ch1_sta   = 794;

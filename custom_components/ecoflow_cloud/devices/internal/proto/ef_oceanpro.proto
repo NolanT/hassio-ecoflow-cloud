@@ -4,45 +4,73 @@ syntax = "proto3";
 // Reuse SmartMeterSetMessage from ef_smartmeter.proto for parsing.
 
 // pdata for cmd_func=254, cmd_id=21  (OceanPro property upload)
-// Field numbers sourced from DevAplComm.java (decompiled EcoFlow app).
+// Field numbers sourced from DevAplComm.java (decompiled EcoFlow 6.11.0 app).
 message OceanProStatus {
   // ── System power ──────────────────────────────────────────────────────────
-  float pcl_pwr_offset      = 53;   // Grid total power, W (negative = export)
-  float pow_get_sys_load    = 516;  // Home load power, W
-  float pow_get_bp_cms      = 518;  // Battery/inverter power, W (positive = charging, negative = discharging)
+  float pcl_pwr_offset        = 53;   // Grid total power, W (negative = export)
+  float pow_get_sys_load      = 516;  // Home load power, W
+  float pow_get_pv_sum        = 517;  // Total PV power, W (all strings combined)
+  float pow_get_bp_cms        = 518;  // Battery/inverter power, W (positive = charging)
+
+  // ── Load source breakdown ─────────────────────────────────────────────────
+  float pow_get_sys_load_from_pv   = 1002; // Home load sourced from PV, W
+  float pow_get_sys_load_from_bp   = 1003; // Home load sourced from battery, W
+  float pow_get_sys_load_from_grid = 1004; // Home load sourced from grid, W
+
+  // ── Generator ─────────────────────────────────────────────────────────────
+  float pow_get_standby_generator  = 781;  // Standby generator power, W
+  float pow_get_portable_generator = 782;  // Portable generator power, W
 
   // ── CMS Battery Management ───────────────────────────────────────────────
-  float cms_batt_temp        = 102;  // Battery temperature, °C
-  float cms_batt_soc         = 262;  // Battery state of charge, %
-  float cms_batt_soh         = 263;  // Battery state of health, %
-  float cms_batt_vol         = 264;  // Battery voltage, V
-  float cms_batt_amp         = 265;  // Battery current, A (positive = charging)
-  int32 cms_dsg_rem_time     = 268;  // Discharge remaining time, seconds
-  int32 cms_chg_rem_time     = 269;  // Charge remaining time, seconds
-  int32 cms_max_chg_soc      = 270;  // Max charge SoC limit, %
-  int32 cms_min_dsg_soc      = 271;  // Min discharge SoC limit, %
-  int32 cms_chg_dsg_state    = 282;  // Charge/discharge state (1=charging, 2=discharging, 0=idle)
-  int32 cms_batt_full_energy  = 462;  // Usable battery energy, Wh
-  int32 cms_bp_running_cnt   = 536;  // Battery pack modules running
-  int32 cms_bp_online_cnt    = 537;  // Battery pack modules online
-  int32 cms_batt_cycle_num   = 1251; // Battery charge cycles
-  int32 cms_energy_out_sum   = 1274; // Cumulative energy discharged, Wh
-  int32 cms_energy_in_sum    = 1275; // Cumulative energy charged, Wh
-  int32 cms_batt_store_energy = 1682; // Current stored energy, Wh
-  int32 cms_batt_rated_energy = 1685; // Rated battery capacity, Wh
+  float cms_batt_temp         = 102;  // Battery temperature, °C
+  float cms_batt_soc          = 262;  // Battery state of charge, %
+  float cms_batt_soh          = 263;  // Battery state of health, %
+  float cms_batt_vol          = 264;  // Battery voltage, V
+  float cms_batt_amp          = 265;  // Battery current, A (positive = charging)
+  int32 cms_dsg_rem_time      = 268;  // Discharge remaining time, seconds
+  int32 cms_chg_rem_time      = 269;  // Charge remaining time, seconds
+  int32 cms_max_chg_soc       = 270;  // Max charge SoC limit, %
+  int32 cms_min_dsg_soc       = 271;  // Min discharge SoC limit, %
+  int32 cms_chg_dsg_state     = 282;  // Charge/discharge state (1=charging, 2=discharging, 0=idle)
+  int32 cms_batt_full_energy   = 462;  // Usable battery energy, Wh
+  int32 cms_bp_running_cnt    = 536;  // Battery pack modules running
+  int32 cms_bp_online_cnt     = 537;  // Battery pack modules online
+  int32 cms_batt_cycle_num    = 1251; // Battery charge cycles
+  int32 cms_energy_out_sum    = 1274; // Cumulative energy discharged, Wh
+  int32 cms_energy_in_sum     = 1275; // Cumulative energy charged, Wh
+  int32 cms_batt_store_energy  = 1682; // Current stored energy, Wh
+  int32 cms_batt_rated_energy  = 1685; // Rated battery capacity, Wh
 
   // ── Grid phase measurements — split-phase US 240 V ────────────────────────
-  float grid_vol_l1          = 1463; // Grid voltage phase L1, V
-  float grid_amp_l1          = 1464; // Grid current phase L1, A
-  float grid_vol_l2          = 1465; // Grid voltage phase L2, V
-  float grid_amp_l2          = 1466; // Grid current phase L2, A
-  float grid_pow_l1          = 1467; // Grid active power L1, W (negative = export)
-  float grid_pow_l2          = 1468; // Grid active power L2, W (negative = export)
+  float grid_vol_l1           = 1463; // Grid voltage phase L1, V
+  float grid_amp_l1           = 1464; // Grid current phase L1, A
+  float grid_vol_l2           = 1465; // Grid voltage phase L2, V
+  float grid_amp_l2           = 1466; // Grid current phase L2, A
+  float grid_pow_l1           = 1467; // Grid active power L1, W (negative = export)
+  float grid_pow_l2           = 1468; // Grid active power L2, W (negative = export)
+
+  // ── Per-MPPT PV string power (up to 8 strings) ────────────────────────────
+  // Values are current power per MPPT channel in W (0 if string not connected)
+  float dt_pv_pwr_current     = 1476; // PV string 1 power, W
+  float dt_pv2_pwr_current    = 1477; // PV string 2 power, W
+  float dt_pv3_pwr_current    = 1478; // PV string 3 power, W
+  float dt_pv4_pwr_current    = 1479; // PV string 4 power, W
+  float dt_pv5_pwr_current    = 1480; // PV string 5 power, W
+  float dt_pv6_pwr_current    = 1481; // PV string 6 power, W
+  float dt_pv7_pwr_current    = 1482; // PV string 7 power, W
+  float dt_pv8_pwr_current    = 1483; // PV string 8 power, W
+
+  // ── Device temperatures ───────────────────────────────────────────────────
+  float dev_temperature_1     = 1553; // Device temperature 1, °C
+  float dev_temperature_2     = 1554; // Device temperature 2, °C
+  float dev_temperature_3     = 1555; // Device temperature 3, °C (inverter)
+  float dev_temperature_4     = 1556; // Device temperature 4, °C
+  float dev_temperature_5     = 1557; // Device temperature 5, °C
 }
 
 // pdata for cmd_func=254, cmd_id=25  (OceanPro short heartbeat)
 // Small pdata (~12 bytes); field numbers tentatively assigned from live captures.
 message OceanProSysInfo {
-  float pv_pwr              = 21;   // Solar PV input power, W
-  float sys_load_pwr        = 22;   // System load power, W
+  float pv_pwr                = 21;   // Solar PV input power, W
+  float sys_load_pwr          = 22;   // System load power, W
 }
