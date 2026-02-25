@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+// Outer MQTT envelope — same as SmartMeter (repeated Header messages)
+// Reuse SmartMeterSetMessage from ef_smartmeter.proto for parsing.
+
+// pdata for cmd_func=254, cmd_id=21  (OceanPro property upload)
+// Field numbers reverse-engineered from live MQTT captures (HR51ZA1* devices).
+message OceanProStatus {
+  // Power values
+  float pcl_pwr_offset     = 53;   // Grid total power, W (negative = export)
+  float pow_get_sys_load   = 516;  // Home load power, W
+  float pow_get_bp_cms     = 518;  // Inverter/battery output power, W
+
+  // Misc
+  int32 battery_soc_x10    = 268;  // Battery SoC × 10 (e.g. 483 = 48.3 %)
+
+  // Phase measurements — split-phase US 240 V
+  float grid_vol_l1        = 1463; // Grid voltage phase L1 (V)
+  float grid_amp_l1        = 1464; // Grid current phase L1 (A)
+  float grid_vol_l2        = 1465; // Grid voltage phase L2 (V)
+  float grid_amp_l2        = 1466; // Grid current phase L2 (A)
+  float grid_pow_l1        = 1467; // Grid active power phase L1 (W, negative = export)
+  float grid_pow_l2        = 1468; // Grid active power phase L2 (W, negative = export)
+
+  int32 misc_1682          = 1682;
+}
+
+// pdata for cmd_func=254, cmd_id=25  (OceanPro short heartbeat)
+// Field numbers from PoEdev.java — SysInfo message.
+message OceanProSysInfo {
+  float pv_pwr             = 21;   // Solar PV input power (W) — tentative
+  float sys_load_pwr       = 22;   // System load power (W) — tentative
+}

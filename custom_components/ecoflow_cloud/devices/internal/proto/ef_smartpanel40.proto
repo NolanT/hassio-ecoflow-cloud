@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+// pdata for cmd_func=254, cmd_id=21  (Smart Panel 40 property upload)
+// Field numbers reverse-engineered from live MQTT captures (HR61ZA1* devices).
+
+// Per-circuit real-time measurement  (fields 1015 – 1054)
+message ChannelSampleInfo {
+  float voltage      = 1;   // Line voltage (V)
+  float reactive_pwr = 2;   // Reactive power (VAR) — signed, optional
+  float current      = 3;   // Current (A)
+}
+
+// Per-circuit configuration / status  (fields 794 – 833)
+message ChannelStatus {
+  int32  enabled   = 1;  // 1 = enabled
+  bytes  ev_config = 2;  // EV-charger sub-config (optional)
+  float  max_amps  = 3;  // Breaker rating (A), e.g. 20.0
+  int32  position  = 4;  // Breaker position / slot number
+  string name      = 5;  // User-assigned circuit name
+  int32  flag      = 6;  // Misc flag (e.g. 1 = double-pole)
+  bytes  index     = 7;  // Index bytes
+}
+
+message SmartPanel40Status {
+  // System / grid
+  string utc_timezone_id          = 134;
+  float  pow_get_sys_load         = 516;  // Total home load (W)
+  float  pow_get_bp_cms           = 518;  // Inverter/battery power (W)
+
+  // Grid phase measurements
+  float  grid_connection_vol_l1   = 956;  // Grid voltage L1 (V)
+  float  grid_connection_vol_l2   = 957;  // Grid voltage L2 (V)
+  float  grid_connection_amp_l1   = 958;  // Grid current L1 (A)
+  float  grid_connection_amp_l2   = 959;  // Grid current L2 (A)
+  float  grid_connection_power_l1 = 962;  // Grid power L1 (W)
+  float  grid_connection_power_l2 = 963;  // Grid power L2 (W)
+
+  // Circuit status / config (40 circuits)
+  ChannelStatus load_ch1_sta   = 794;
+  ChannelStatus load_ch2_sta   = 795;
+  ChannelStatus load_ch3_sta   = 796;
+  ChannelStatus load_ch4_sta   = 797;
+  ChannelStatus load_ch5_sta   = 798;
+  ChannelStatus load_ch6_sta   = 799;
+  ChannelStatus load_ch7_sta   = 800;
+  ChannelStatus load_ch8_sta   = 801;
+  ChannelStatus load_ch9_sta   = 802;
+  ChannelStatus load_ch10_sta  = 803;
+  ChannelStatus load_ch11_sta  = 804;
+  ChannelStatus load_ch12_sta  = 805;
+  ChannelStatus load_ch13_sta  = 806;
+  ChannelStatus load_ch14_sta  = 807;
+  ChannelStatus load_ch15_sta  = 808;
+  ChannelStatus load_ch16_sta  = 809;
+  ChannelStatus load_ch17_sta  = 810;
+  ChannelStatus load_ch18_sta  = 811;
+  ChannelStatus load_ch19_sta  = 812;
+  ChannelStatus load_ch20_sta  = 813;
+  ChannelStatus load_ch21_sta  = 814;
+  ChannelStatus load_ch22_sta  = 815;
+  ChannelStatus load_ch23_sta  = 816;
+  ChannelStatus load_ch24_sta  = 817;
+  ChannelStatus load_ch25_sta  = 818;
+  ChannelStatus load_ch26_sta  = 819;
+  ChannelStatus load_ch27_sta  = 820;
+  ChannelStatus load_ch28_sta  = 821;
+  ChannelStatus load_ch29_sta  = 822;
+  ChannelStatus load_ch30_sta  = 823;
+  ChannelStatus load_ch31_sta  = 824;
+  ChannelStatus load_ch32_sta  = 825;
+  ChannelStatus load_ch33_sta  = 826;
+  ChannelStatus load_ch34_sta  = 827;
+  ChannelStatus load_ch35_sta  = 828;
+  ChannelStatus load_ch36_sta  = 829;
+  ChannelStatus load_ch37_sta  = 830;
+  ChannelStatus load_ch38_sta  = 831;
+  ChannelStatus load_ch39_sta  = 832;
+  ChannelStatus load_ch40_sta  = 833;
+
+  // Circuit real-time measurements (40 circuits)
+  ChannelSampleInfo load_ch1_sample_info   = 1015;
+  ChannelSampleInfo load_ch2_sample_info   = 1016;
+  ChannelSampleInfo load_ch3_sample_info   = 1017;
+  ChannelSampleInfo load_ch4_sample_info   = 1018;
+  ChannelSampleInfo load_ch5_sample_info   = 1019;
+  ChannelSampleInfo load_ch6_sample_info   = 1020;
+  ChannelSampleInfo load_ch7_sample_info   = 1021;
+  ChannelSampleInfo load_ch8_sample_info   = 1022;
+  ChannelSampleInfo load_ch9_sample_info   = 1023;
+  ChannelSampleInfo load_ch10_sample_info  = 1024;
+  ChannelSampleInfo load_ch11_sample_info  = 1025;
+  ChannelSampleInfo load_ch12_sample_info  = 1026;
+  ChannelSampleInfo load_ch13_sample_info  = 1027;
+  ChannelSampleInfo load_ch14_sample_info  = 1028;
+  ChannelSampleInfo load_ch15_sample_info  = 1029;
+  ChannelSampleInfo load_ch16_sample_info  = 1030;
+  ChannelSampleInfo load_ch17_sample_info  = 1031;
+  ChannelSampleInfo load_ch18_sample_info  = 1032;
+  ChannelSampleInfo load_ch19_sample_info  = 1033;
+  ChannelSampleInfo load_ch20_sample_info  = 1034;
+  ChannelSampleInfo load_ch21_sample_info  = 1035;
+  ChannelSampleInfo load_ch22_sample_info  = 1036;
+  ChannelSampleInfo load_ch23_sample_info  = 1037;
+  ChannelSampleInfo load_ch24_sample_info  = 1038;
+  ChannelSampleInfo load_ch25_sample_info  = 1039;
+  ChannelSampleInfo load_ch26_sample_info  = 1040;
+  ChannelSampleInfo load_ch27_sample_info  = 1041;
+  ChannelSampleInfo load_ch28_sample_info  = 1042;
+  ChannelSampleInfo load_ch29_sample_info  = 1043;
+  ChannelSampleInfo load_ch30_sample_info  = 1044;
+  ChannelSampleInfo load_ch31_sample_info  = 1045;
+  ChannelSampleInfo load_ch32_sample_info  = 1046;
+  ChannelSampleInfo load_ch33_sample_info  = 1047;
+  ChannelSampleInfo load_ch34_sample_info  = 1048;
+  ChannelSampleInfo load_ch35_sample_info  = 1049;
+  ChannelSampleInfo load_ch36_sample_info  = 1050;
+  ChannelSampleInfo load_ch37_sample_info  = 1051;
+  ChannelSampleInfo load_ch38_sample_info  = 1052;
+  ChannelSampleInfo load_ch39_sample_info  = 1053;
+  ChannelSampleInfo load_ch40_sample_info  = 1054;
+}
