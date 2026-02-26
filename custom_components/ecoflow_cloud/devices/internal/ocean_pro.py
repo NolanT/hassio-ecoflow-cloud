@@ -56,10 +56,10 @@ class OceanPro(BaseInternalDevice):
         sh = f"{_CMD_FUNC}_{_CMD_SYSINFO}"  # "254_25"
         return [
             # ── System power ─────────────────────────────────────────────────
-            WattsSensorEntity(client, self, f"{pf}.powGetSysLoad", "Home Load"),
-            WattsSensorEntity(client, self, f"{pf}.pclPwrOffset", "Grid Power"),
-            WattsSensorEntity(client, self, f"{pf}.powGetBpCms", "Battery Power"),
-            WattsSensorEntity(client, self, f"{pf}.powGetPvSum", "PV Power"),
+            WattsSensorEntity(client, self, f"{pf}.powGetSysLoad", "Home Load").with_energy(),
+            WattsSensorEntity(client, self, f"{pf}.pclPwrOffset", "Grid Power").with_energy(),
+            WattsSensorEntity(client, self, f"{pf}.powGetBpCms", "Battery Power").with_energy(),
+            WattsSensorEntity(client, self, f"{pf}.powGetPvSum", "PV Power").with_energy(),
 
             # ── PV strings (per-MPPT, enabled by default) ────────────────────
             WattsSensorEntity(client, self, f"{pf}.dtPvPwrCurrent", "PV String 1"),
@@ -140,11 +140,9 @@ class OceanPro(BaseInternalDevice):
             ),
             EnergySensorEntity(
                 client, self, f"{pf}.cmsEnergyInSum", "Lifetime Energy Charged",
-                enabled=False,
             ),
             EnergySensorEntity(
                 client, self, f"{pf}.cmsEnergyOutSum", "Lifetime Energy Discharged",
-                enabled=False,
             ),
 
             # ── Grid phase sensors (disabled by default) ──────────────────────

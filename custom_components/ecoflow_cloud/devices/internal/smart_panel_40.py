@@ -60,12 +60,12 @@ class SmartPanel40(BaseInternalDevice):
         pf = f"{_CMD_FUNC}_{_CMD_STATUS}"
         entities: list[SensorEntity] = [
             # ── System power ─────────────────────────────────────────────────
-            WattsSensorEntity(client, self, f"{pf}.powGetSysLoad", "Home Load"),
-            WattsSensorEntity(client, self, f"{pf}.powGetPvSum", "PV Power"),
-            WattsSensorEntity(client, self, f"{pf}.powGetBpCms", "Battery Power"),
+            WattsSensorEntity(client, self, f"{pf}.powGetSysLoad", "Home Load").with_energy(),
+            WattsSensorEntity(client, self, f"{pf}.powGetPvSum", "PV Power").with_energy(),
+            WattsSensorEntity(client, self, f"{pf}.powGetBpCms", "Battery Power").with_energy(),
 
             # Computed total grid power (L1 + L2, stored by _prepare_data)
-            WattsSensorEntity(client, self, f"{pf}.grid_power_total", "Grid Power Total"),
+            WattsSensorEntity(client, self, f"{pf}.grid_power_total", "Grid Power Total").with_energy(),
 
             # ── PV strings (per-MPPT, enabled by default) ────────────────────
             WattsSensorEntity(client, self, f"{pf}.dtPvPwrCurrent", "PV String 1"),
