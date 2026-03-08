@@ -9,6 +9,7 @@ Field numbers sourced from DevAplComm.java (decompiled EcoFlow 6.11.0 app).
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, cast, override
 
@@ -22,6 +23,7 @@ from homeassistant.util import dt
 from custom_components.ecoflow_cloud.api import EcoflowApiClient
 from custom_components.ecoflow_cloud.api.message import JSONDict
 from custom_components.ecoflow_cloud.devices import BaseInternalDevice
+from custom_components.ecoflow_cloud.devices.data_holder import PreparedData
 from custom_components.ecoflow_cloud.devices.internal import flatten_dict
 from custom_components.ecoflow_cloud.devices.internal.proto import ef_smartmeter_pb2
 from custom_components.ecoflow_cloud.devices.internal.proto import ef_smartpanel40_pb2
@@ -63,6 +65,11 @@ class SmartPanel40(BaseInternalDevice):
             WattsSensorEntity(client, self, f"{pf}.powGetSysLoad", "Home Load").with_energy(),
             WattsSensorEntity(client, self, f"{pf}.powGetPvSum", "PV Power").with_energy(),
             WattsSensorEntity(client, self, f"{pf}.powGetBpCms", "Battery Power").with_energy(),
+            WattsSensorEntity(client, self, f"{pf}.powGetSysGrid", "System Grid Power").with_energy(),
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetLoadOutputSum", "Load Output Sum",
+                enabled=False,
+            ),
 
             # Computed total grid power (L1 + L2, stored by _prepare_data)
             WattsSensorEntity(client, self, f"{pf}.grid_power_total", "Grid Power Total").with_energy(),
@@ -243,6 +250,15 @@ class SmartPanel40(BaseInternalDevice):
 
     def _status_sensor(self, client: EcoflowApiClient) -> QuotaStatusSensorEntity:
         return QuotaStatusSensorEntity(client, self)
+
+    @override
+    def _prepare_data_get_reply_topic(self, raw_data: bytes) -> PreparedData:
+        # get_reply carries a JSON acknowledgement, not a proto payload.
+        try:
+            data = json.loads(raw_data)
+        except Exception:
+            data = {}
+        return PreparedData(None, None, data)
 
     @override
     def _prepare_data(self, raw_data: bytes) -> dict[str, Any]:

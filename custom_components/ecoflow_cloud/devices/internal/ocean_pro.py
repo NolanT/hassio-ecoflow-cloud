@@ -10,10 +10,13 @@ Field numbers sourced from DevAplComm.java (decompiled EcoFlow 6.11.0 app).
 
 from __future__ import annotations
 
+import json
 import logging
+import time
 from typing import Any, cast, override
 
 from google.protobuf.json_format import MessageToDict
+from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.components.number import NumberEntity
 from homeassistant.components.select import SelectEntity
 from homeassistant.components.sensor import SensorEntity
@@ -21,11 +24,14 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.util import dt
 
 from custom_components.ecoflow_cloud.api import EcoflowApiClient
-from custom_components.ecoflow_cloud.api.message import JSONDict
+from custom_components.ecoflow_cloud.api.message import JSONDict, Message, PrivateAPIMessageProtocol
+from custom_components.ecoflow_cloud.binary_sensor import MiscBinarySensorEntity
 from custom_components.ecoflow_cloud.devices import BaseInternalDevice
+from custom_components.ecoflow_cloud.devices.data_holder import PreparedData
 from custom_components.ecoflow_cloud.devices.internal import flatten_dict
-from custom_components.ecoflow_cloud.devices.internal.proto import ef_smartmeter_pb2
+from custom_components.ecoflow_cloud.devices.internal.proto import AddressId, ef_smartmeter_pb2
 from custom_components.ecoflow_cloud.devices.internal.proto import ef_oceanpro_pb2
+from custom_components.ecoflow_cloud.switch import EnabledEntity
 from custom_components.ecoflow_cloud.sensor import (
     AmpSensorEntity,
     CelsiusSensorEntity,
@@ -42,13 +48,74 @@ from custom_components.ecoflow_cloud.sensor import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Grid voltage threshold below which "Grid Fault" binary sensor fires.
+# OceanPro reports ~3–4 V on grid terminals during a grid fault instead of ~120 V.
+_GRID_FAULT_VOLTAGE_THRESHOLD = 50.0
+
+# cmd_func=32, cmd_id=177 battery-pack telemetry appears when Emergency backup is ON.
+# If no such message has been seen within this window (seconds), Emergency backup is OFF.
+_EMERGENCY_BACKUP_WINDOW_S = 120
+
+
+class OceanProCommandMessage(PrivateAPIMessageProtocol):
+    """Wraps a protobuf payload in a SmartMeterSetMessage envelope for OceanPro SET commands."""
+
+    def __init__(self, device_sn: str, cmd_func: int, cmd_id: int, payload: Any) -> None:
+        self._packet = ef_smartmeter_pb2.SmartMeterSetMessage()
+        message = self._packet.msg.add()
+        message.seq = Message.gen_seq()
+        message.device_sn = device_sn
+        message.from_ = "android"
+        message.src = AddressId.APP
+        message.dest = AddressId.MQTT
+        message.d_src = 1
+        message.d_dest = 1
+        message.check_type = 3
+        message.need_ack = 1
+        message.version = 19
+        message.payload_ver = 1
+        message.cmd_func = cmd_func
+        message.cmd_id = cmd_id
+        if payload is not None:
+            pdata = payload.SerializeToString()
+            message.pdata = pdata
+            message.data_len = len(pdata)
+
+    @override
+    def to_mqtt_payload(self) -> bytes:
+        return self._packet.SerializeToString()
+
+    @override
+    def to_dict(self) -> dict:
+        return MessageToDict(self._packet, preserving_proto_field_name=True)
+
+
+class _GridFaultBinarySensorEntity(MiscBinarySensorEntity):
+    """Binary sensor: True when the measured grid voltage is abnormally low."""
+
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+
+    def _update_value(self, val: Any) -> bool:
+        self._attr_is_on = isinstance(val, (int, float)) and val < _GRID_FAULT_VOLTAGE_THRESHOLD
+        return True
+
+
 # cmd_func / cmd_id values observed in live captures
 _CMD_FUNC = 254
 _CMD_STATUS = 21    # long property-upload  (OceanProStatus)
 _CMD_SYSINFO = 25   # short heartbeat       (OceanProSysInfo)
+_CMD_CFGWRITE = 17  # config write / SET command
+
+# Battery-pack telemetry cmd that appears when Emergency backup is active
+_CMD_FUNC_BP = 32
+_CMD_ID_BP = 177
 
 
 class OceanPro(BaseInternalDevice):
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._last_emergency_heartbeat: float = 0.0
 
     @override
     def sensors(self, client: EcoflowApiClient) -> list[SensorEntity]:
@@ -58,6 +125,7 @@ class OceanPro(BaseInternalDevice):
             # ── System power ─────────────────────────────────────────────────
             WattsSensorEntity(client, self, f"{pf}.powGetSysLoad", "Home Load").with_energy(),
             WattsSensorEntity(client, self, f"{pf}.pclPwrOffset", "Grid Power").with_energy(),
+            WattsSensorEntity(client, self, f"{pf}.powGetSysGrid", "System Grid Power").with_energy(),
             WattsSensorEntity(client, self, f"{pf}.powGetBpCms", "Battery Power").with_energy(),
             WattsSensorEntity(client, self, f"{pf}.powGetPvSum", "PV Power").with_energy(),
 
@@ -144,6 +212,30 @@ class OceanPro(BaseInternalDevice):
             EnergySensorEntity(
                 client, self, f"{pf}.cmsEnergyOutSum", "Lifetime Energy Discharged",
             ),
+            WattsSensorEntity(
+                client, self, f"{pf}.cmsBattPowOutMax", "Max Discharge Power",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.cmsBattPowInMax", "Max Charge Power",
+                enabled=False,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.gridChgPowMax", "Max Grid Charge Power",
+                enabled=False,
+            ),
+            LevelSensorEntity(
+                client, self, f"{pf}.backupReverseSoc", "Backup Reserve SoC",
+                enabled=False,
+            ),
+            LevelSensorEntity(
+                client, self, f"{pf}.backupSocVpp", "VPP Backup SoC",
+                enabled=False,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.bmsBattHeating", "Battery Heating",
+                enabled=False,
+            ),
 
             # ── Grid phase sensors (disabled by default) ──────────────────────
             VoltSensorEntity(
@@ -197,6 +289,10 @@ class OceanPro(BaseInternalDevice):
 
             # ── Device temperatures (disabled by default) ─────────────────────
             CelsiusSensorEntity(
+                client, self, f"{pf}.invNtcTemp2", "Inverter Temperature 2",
+                enabled=False,
+            ),
+            CelsiusSensorEntity(
                 client, self, f"{pf}.devTemperature1", "Device Temperature 1",
                 enabled=False,
             ),
@@ -225,6 +321,46 @@ class OceanPro(BaseInternalDevice):
                 enabled=False,
             ),
 
+            # ── Grid status / EMS settings (diagnostic) ─────────────────────
+            MiscSensorEntity(
+                client, self, f"{pf}.gridConnectionSta", "Grid Connection Status",
+                enabled=False, diagnostic=True,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.emsFsmstate", "EMS State",
+                enabled=False, diagnostic=True,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.feedGridMode", "Feed Grid Mode",
+                enabled=False, diagnostic=True,
+            ),
+            WattsSensorEntity(
+                client, self, f"{pf}.feedGridModePowLimit", "Feed Grid Power Limit",
+                enabled=False, diagnostic=True,
+            ),
+
+            # ── PCS error / fault / warning codes (diagnostic) ───────────────
+            MiscSensorEntity(
+                client, self, f"{pf}.dtPcsErrorCode", "PCS Error Code",
+                enabled=False, diagnostic=True,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.dtPcsWaringCode", "PCS Warning Code",
+                enabled=False, diagnostic=True,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.dtPcsGridRuleFaultCode", "PCS Grid Fault Code",
+                enabled=False, diagnostic=True,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.dtPcsOtherFaultCode", "PCS Other Fault Code",
+                enabled=False, diagnostic=True,
+            ),
+            MiscSensorEntity(
+                client, self, f"{pf}.dtPcsIsrFault", "PCS ISR Fault Code",
+                enabled=False, diagnostic=True,
+            ),
+
             self._status_sensor(client),
         ]
 
@@ -232,13 +368,63 @@ class OceanPro(BaseInternalDevice):
         return []
 
     def switches(self, client: EcoflowApiClient) -> list[SwitchEntity]:
-        return []
+        pf = f"{_CMD_FUNC}_{_CMD_STATUS}"
+
+        def _emergency_backup_command(val: int) -> Message:
+            payload = ef_oceanpro_pb2.OceanProConfigWrite()
+            payload.cfg_manual_emergency_backup_switch = bool(val)
+            return OceanProCommandMessage(
+                self.device_data.sn, _CMD_FUNC, _CMD_CFGWRITE, payload
+            )
+
+        return [
+            EnabledEntity(
+                client, self,
+                f"{pf}.emergencyBackupActive",
+                "Emergency Backup",
+                _emergency_backup_command,
+            ),
+        ]
 
     def selects(self, client: EcoflowApiClient) -> list[SelectEntity]:
         return []
 
+    @override
+    def binary_sensors(self, client: EcoflowApiClient) -> list[BinarySensorEntity]:
+        pf = f"{_CMD_FUNC}_{_CMD_STATUS}"
+        return [
+            _GridFaultBinarySensorEntity(
+                client, self, f"{pf}.gridVolL1", "Grid Fault",
+            ),
+            MiscBinarySensorEntity(
+                client, self, f"{pf}.gridIsEnergized", "Grid Energized",
+            ),
+            MiscBinarySensorEntity(
+                client, self, f"{pf}.stormPatternEnable", "Storm Mode",
+                enabled=False,
+            ),
+            MiscBinarySensorEntity(
+                client, self, f"{pf}.gridChargeToBatteryEnable", "Grid Charge to Battery",
+                enabled=False,
+            ),
+            MiscBinarySensorEntity(
+                client, self, f"{pf}.bmsBattHeating", "Battery Heating",
+                enabled=False,
+            ),
+        ]
+
     def _status_sensor(self, client: EcoflowApiClient) -> QuotaStatusSensorEntity:
         return QuotaStatusSensorEntity(client, self)
+
+    @override
+    def _prepare_data_get_reply_topic(self, raw_data: bytes) -> PreparedData:
+        # get_reply carries a JSON acknowledgement, not a proto payload.
+        # Parsing it with the proto parser produces a spurious ERROR log.
+        try:
+            data = json.loads(raw_data)
+        except Exception:
+            data = {}
+        return PreparedData(None, None, data)
 
     @override
     def _prepare_data(self, raw_data: bytes) -> dict[str, Any]:
@@ -278,12 +464,21 @@ class OceanPro(BaseInternalDevice):
                     for k, v in flatten_dict(raw).items():
                         params[f"{prefix}.{k}"] = v
 
+                    # Inject Emergency backup state derived from BP heartbeat recency
+                    active = (time.monotonic() - self._last_emergency_heartbeat) < _EMERGENCY_BACKUP_WINDOW_S
+                    params[f"{prefix}.emergencyBackupActive"] = active
+
                 elif cmd_func == _CMD_FUNC and cmd_id == _CMD_SYSINFO:
                     payload = ef_oceanpro_pb2.OceanProSysInfo()
                     payload.ParseFromString(pdata)
                     raw = MessageToDict(payload, preserving_proto_field_name=False)
                     for k, v in flatten_dict(raw).items():
                         params[f"{prefix}.{k}"] = v
+
+                elif cmd_func == _CMD_FUNC_BP and cmd_id == _CMD_ID_BP:
+                    # Battery-pack telemetry: presence indicates Emergency backup is ON
+                    self._last_emergency_heartbeat = time.monotonic()
+                    params[f"{_CMD_FUNC}_{_CMD_STATUS}.emergencyBackupActive"] = True
 
                 else:
                     _LOGGER.debug("OceanPro: unhandled cmd_func=%s cmd_id=%s", cmd_func, cmd_id)

@@ -1,0 +1,155 @@
+from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from typing import ClassVar as _ClassVar, Optional as _Optional
+
+DESCRIPTOR: _descriptor.FileDescriptor
+
+class OceanProStatus(_message.Message):
+    __slots__ = ("pcl_pwr_offset", "pow_get_sys_grid", "pow_get_sys_load", "pow_get_pv_sum", "pow_get_bp_cms", "pow_get_sys_load_from_pv", "pow_get_sys_load_from_bp", "pow_get_sys_load_from_grid", "pow_get_standby_generator", "pow_get_portable_generator", "grid_connection_sta", "grid_is_energized", "grid_chg_pow_max", "feed_grid_mode", "feed_grid_mode_pow_limit", "grid_charge_to_battery_enable", "storm_pattern_enable", "cms_batt_temp", "cms_batt_soc", "cms_batt_soh", "cms_batt_vol", "cms_batt_amp", "cms_dsg_rem_time", "cms_chg_rem_time", "cms_max_chg_soc", "cms_min_dsg_soc", "cms_chg_dsg_state", "cms_batt_full_energy", "cms_bp_running_cnt", "cms_bp_online_cnt", "cms_batt_cycle_num", "cms_energy_out_sum", "cms_energy_in_sum", "cms_batt_store_energy", "cms_batt_rated_energy", "cms_batt_pow_out_max", "cms_batt_pow_in_max", "backup_reverse_soc", "backup_soc_vpp", "bms_batt_heating", "grid_vol_l1", "grid_amp_l1", "grid_vol_l2", "grid_amp_l2", "grid_pow_l1", "grid_pow_l2", "dt_pv_pwr_current", "dt_pv2_pwr_current", "dt_pv3_pwr_current", "dt_pv4_pwr_current", "dt_pv5_pwr_current", "dt_pv6_pwr_current", "dt_pv7_pwr_current", "dt_pv8_pwr_current", "ems_fsmstate", "inv_ntc_temp2", "dev_temperature_1", "dev_temperature_2", "dev_temperature_3", "dev_temperature_4", "dev_temperature_5", "dt_pcs_error_code", "dt_pcs_waring_code", "dt_pcs_grid_rule_fault_code", "dt_pcs_other_fault_code", "dt_pcs_isr_fault")
+    PCL_PWR_OFFSET_FIELD_NUMBER: _ClassVar[int]
+    POW_GET_SYS_GRID_FIELD_NUMBER: _ClassVar[int]
+    POW_GET_SYS_LOAD_FIELD_NUMBER: _ClassVar[int]
+    POW_GET_PV_SUM_FIELD_NUMBER: _ClassVar[int]
+    POW_GET_BP_CMS_FIELD_NUMBER: _ClassVar[int]
+    POW_GET_SYS_LOAD_FROM_PV_FIELD_NUMBER: _ClassVar[int]
+    POW_GET_SYS_LOAD_FROM_BP_FIELD_NUMBER: _ClassVar[int]
+    POW_GET_SYS_LOAD_FROM_GRID_FIELD_NUMBER: _ClassVar[int]
+    POW_GET_STANDBY_GENERATOR_FIELD_NUMBER: _ClassVar[int]
+    POW_GET_PORTABLE_GENERATOR_FIELD_NUMBER: _ClassVar[int]
+    GRID_CONNECTION_STA_FIELD_NUMBER: _ClassVar[int]
+    GRID_IS_ENERGIZED_FIELD_NUMBER: _ClassVar[int]
+    GRID_CHG_POW_MAX_FIELD_NUMBER: _ClassVar[int]
+    FEED_GRID_MODE_FIELD_NUMBER: _ClassVar[int]
+    FEED_GRID_MODE_POW_LIMIT_FIELD_NUMBER: _ClassVar[int]
+    GRID_CHARGE_TO_BATTERY_ENABLE_FIELD_NUMBER: _ClassVar[int]
+    STORM_PATTERN_ENABLE_FIELD_NUMBER: _ClassVar[int]
+    CMS_BATT_TEMP_FIELD_NUMBER: _ClassVar[int]
+    CMS_BATT_SOC_FIELD_NUMBER: _ClassVar[int]
+    CMS_BATT_SOH_FIELD_NUMBER: _ClassVar[int]
+    CMS_BATT_VOL_FIELD_NUMBER: _ClassVar[int]
+    CMS_BATT_AMP_FIELD_NUMBER: _ClassVar[int]
+    CMS_DSG_REM_TIME_FIELD_NUMBER: _ClassVar[int]
+    CMS_CHG_REM_TIME_FIELD_NUMBER: _ClassVar[int]
+    CMS_MAX_CHG_SOC_FIELD_NUMBER: _ClassVar[int]
+    CMS_MIN_DSG_SOC_FIELD_NUMBER: _ClassVar[int]
+    CMS_CHG_DSG_STATE_FIELD_NUMBER: _ClassVar[int]
+    CMS_BATT_FULL_ENERGY_FIELD_NUMBER: _ClassVar[int]
+    CMS_BP_RUNNING_CNT_FIELD_NUMBER: _ClassVar[int]
+    CMS_BP_ONLINE_CNT_FIELD_NUMBER: _ClassVar[int]
+    CMS_BATT_CYCLE_NUM_FIELD_NUMBER: _ClassVar[int]
+    CMS_ENERGY_OUT_SUM_FIELD_NUMBER: _ClassVar[int]
+    CMS_ENERGY_IN_SUM_FIELD_NUMBER: _ClassVar[int]
+    CMS_BATT_STORE_ENERGY_FIELD_NUMBER: _ClassVar[int]
+    CMS_BATT_RATED_ENERGY_FIELD_NUMBER: _ClassVar[int]
+    CMS_BATT_POW_OUT_MAX_FIELD_NUMBER: _ClassVar[int]
+    CMS_BATT_POW_IN_MAX_FIELD_NUMBER: _ClassVar[int]
+    BACKUP_REVERSE_SOC_FIELD_NUMBER: _ClassVar[int]
+    BACKUP_SOC_VPP_FIELD_NUMBER: _ClassVar[int]
+    BMS_BATT_HEATING_FIELD_NUMBER: _ClassVar[int]
+    GRID_VOL_L1_FIELD_NUMBER: _ClassVar[int]
+    GRID_AMP_L1_FIELD_NUMBER: _ClassVar[int]
+    GRID_VOL_L2_FIELD_NUMBER: _ClassVar[int]
+    GRID_AMP_L2_FIELD_NUMBER: _ClassVar[int]
+    GRID_POW_L1_FIELD_NUMBER: _ClassVar[int]
+    GRID_POW_L2_FIELD_NUMBER: _ClassVar[int]
+    DT_PV_PWR_CURRENT_FIELD_NUMBER: _ClassVar[int]
+    DT_PV2_PWR_CURRENT_FIELD_NUMBER: _ClassVar[int]
+    DT_PV3_PWR_CURRENT_FIELD_NUMBER: _ClassVar[int]
+    DT_PV4_PWR_CURRENT_FIELD_NUMBER: _ClassVar[int]
+    DT_PV5_PWR_CURRENT_FIELD_NUMBER: _ClassVar[int]
+    DT_PV6_PWR_CURRENT_FIELD_NUMBER: _ClassVar[int]
+    DT_PV7_PWR_CURRENT_FIELD_NUMBER: _ClassVar[int]
+    DT_PV8_PWR_CURRENT_FIELD_NUMBER: _ClassVar[int]
+    EMS_FSMSTATE_FIELD_NUMBER: _ClassVar[int]
+    INV_NTC_TEMP2_FIELD_NUMBER: _ClassVar[int]
+    DEV_TEMPERATURE_1_FIELD_NUMBER: _ClassVar[int]
+    DEV_TEMPERATURE_2_FIELD_NUMBER: _ClassVar[int]
+    DEV_TEMPERATURE_3_FIELD_NUMBER: _ClassVar[int]
+    DEV_TEMPERATURE_4_FIELD_NUMBER: _ClassVar[int]
+    DEV_TEMPERATURE_5_FIELD_NUMBER: _ClassVar[int]
+    DT_PCS_ERROR_CODE_FIELD_NUMBER: _ClassVar[int]
+    DT_PCS_WARING_CODE_FIELD_NUMBER: _ClassVar[int]
+    DT_PCS_GRID_RULE_FAULT_CODE_FIELD_NUMBER: _ClassVar[int]
+    DT_PCS_OTHER_FAULT_CODE_FIELD_NUMBER: _ClassVar[int]
+    DT_PCS_ISR_FAULT_FIELD_NUMBER: _ClassVar[int]
+    pcl_pwr_offset: float
+    pow_get_sys_grid: float
+    pow_get_sys_load: float
+    pow_get_pv_sum: float
+    pow_get_bp_cms: float
+    pow_get_sys_load_from_pv: float
+    pow_get_sys_load_from_bp: float
+    pow_get_sys_load_from_grid: float
+    pow_get_standby_generator: float
+    pow_get_portable_generator: float
+    grid_connection_sta: int
+    grid_is_energized: bool
+    grid_chg_pow_max: int
+    feed_grid_mode: int
+    feed_grid_mode_pow_limit: int
+    grid_charge_to_battery_enable: bool
+    storm_pattern_enable: bool
+    cms_batt_temp: float
+    cms_batt_soc: float
+    cms_batt_soh: float
+    cms_batt_vol: float
+    cms_batt_amp: float
+    cms_dsg_rem_time: int
+    cms_chg_rem_time: int
+    cms_max_chg_soc: int
+    cms_min_dsg_soc: int
+    cms_chg_dsg_state: int
+    cms_batt_full_energy: int
+    cms_bp_running_cnt: int
+    cms_bp_online_cnt: int
+    cms_batt_cycle_num: int
+    cms_energy_out_sum: int
+    cms_energy_in_sum: int
+    cms_batt_store_energy: int
+    cms_batt_rated_energy: int
+    cms_batt_pow_out_max: int
+    cms_batt_pow_in_max: int
+    backup_reverse_soc: int
+    backup_soc_vpp: int
+    bms_batt_heating: bool
+    grid_vol_l1: float
+    grid_amp_l1: float
+    grid_vol_l2: float
+    grid_amp_l2: float
+    grid_pow_l1: float
+    grid_pow_l2: float
+    dt_pv_pwr_current: float
+    dt_pv2_pwr_current: float
+    dt_pv3_pwr_current: float
+    dt_pv4_pwr_current: float
+    dt_pv5_pwr_current: float
+    dt_pv6_pwr_current: float
+    dt_pv7_pwr_current: float
+    dt_pv8_pwr_current: float
+    ems_fsmstate: int
+    inv_ntc_temp2: int
+    dev_temperature_1: float
+    dev_temperature_2: float
+    dev_temperature_3: float
+    dev_temperature_4: float
+    dev_temperature_5: float
+    dt_pcs_error_code: int
+    dt_pcs_waring_code: int
+    dt_pcs_grid_rule_fault_code: int
+    dt_pcs_other_fault_code: int
+    dt_pcs_isr_fault: int
+    def __init__(self, pcl_pwr_offset: _Optional[float] = ..., pow_get_sys_grid: _Optional[float] = ..., pow_get_sys_load: _Optional[float] = ..., pow_get_pv_sum: _Optional[float] = ..., pow_get_bp_cms: _Optional[float] = ..., pow_get_sys_load_from_pv: _Optional[float] = ..., pow_get_sys_load_from_bp: _Optional[float] = ..., pow_get_sys_load_from_grid: _Optional[float] = ..., pow_get_standby_generator: _Optional[float] = ..., pow_get_portable_generator: _Optional[float] = ..., grid_connection_sta: _Optional[int] = ..., grid_is_energized: _Optional[bool] = ..., grid_chg_pow_max: _Optional[int] = ..., feed_grid_mode: _Optional[int] = ..., feed_grid_mode_pow_limit: _Optional[int] = ..., grid_charge_to_battery_enable: _Optional[bool] = ..., storm_pattern_enable: _Optional[bool] = ..., cms_batt_temp: _Optional[float] = ..., cms_batt_soc: _Optional[float] = ..., cms_batt_soh: _Optional[float] = ..., cms_batt_vol: _Optional[float] = ..., cms_batt_amp: _Optional[float] = ..., cms_dsg_rem_time: _Optional[int] = ..., cms_chg_rem_time: _Optional[int] = ..., cms_max_chg_soc: _Optional[int] = ..., cms_min_dsg_soc: _Optional[int] = ..., cms_chg_dsg_state: _Optional[int] = ..., cms_batt_full_energy: _Optional[int] = ..., cms_bp_running_cnt: _Optional[int] = ..., cms_bp_online_cnt: _Optional[int] = ..., cms_batt_cycle_num: _Optional[int] = ..., cms_energy_out_sum: _Optional[int] = ..., cms_energy_in_sum: _Optional[int] = ..., cms_batt_store_energy: _Optional[int] = ..., cms_batt_rated_energy: _Optional[int] = ..., cms_batt_pow_out_max: _Optional[int] = ..., cms_batt_pow_in_max: _Optional[int] = ..., backup_reverse_soc: _Optional[int] = ..., backup_soc_vpp: _Optional[int] = ..., bms_batt_heating: _Optional[bool] = ..., grid_vol_l1: _Optional[float] = ..., grid_amp_l1: _Optional[float] = ..., grid_vol_l2: _Optional[float] = ..., grid_amp_l2: _Optional[float] = ..., grid_pow_l1: _Optional[float] = ..., grid_pow_l2: _Optional[float] = ..., dt_pv_pwr_current: _Optional[float] = ..., dt_pv2_pwr_current: _Optional[float] = ..., dt_pv3_pwr_current: _Optional[float] = ..., dt_pv4_pwr_current: _Optional[float] = ..., dt_pv5_pwr_current: _Optional[float] = ..., dt_pv6_pwr_current: _Optional[float] = ..., dt_pv7_pwr_current: _Optional[float] = ..., dt_pv8_pwr_current: _Optional[float] = ..., ems_fsmstate: _Optional[int] = ..., inv_ntc_temp2: _Optional[int] = ..., dev_temperature_1: _Optional[float] = ..., dev_temperature_2: _Optional[float] = ..., dev_temperature_3: _Optional[float] = ..., dev_temperature_4: _Optional[float] = ..., dev_temperature_5: _Optional[float] = ..., dt_pcs_error_code: _Optional[int] = ..., dt_pcs_waring_code: _Optional[int] = ..., dt_pcs_grid_rule_fault_code: _Optional[int] = ..., dt_pcs_other_fault_code: _Optional[int] = ..., dt_pcs_isr_fault: _Optional[int] = ...) -> None: ...
+
+class OceanProSysInfo(_message.Message):
+    __slots__ = ("pv_pwr", "sys_load_pwr")
+    PV_PWR_FIELD_NUMBER: _ClassVar[int]
+    SYS_LOAD_PWR_FIELD_NUMBER: _ClassVar[int]
+    pv_pwr: float
+    sys_load_pwr: float
+    def __init__(self, pv_pwr: _Optional[float] = ..., sys_load_pwr: _Optional[float] = ...) -> None: ...
+
+class OceanProConfigWrite(_message.Message):
+    __slots__ = ("cfg_manual_emergency_backup_switch",)
+    CFG_MANUAL_EMERGENCY_BACKUP_SWITCH_FIELD_NUMBER: _ClassVar[int]
+    cfg_manual_emergency_backup_switch: bool
+    def __init__(self, cfg_manual_emergency_backup_switch: _Optional[bool] = ...) -> None: ...

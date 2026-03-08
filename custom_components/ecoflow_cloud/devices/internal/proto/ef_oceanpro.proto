@@ -8,6 +8,7 @@ syntax = "proto3";
 message OceanProStatus {
   // ── System power ──────────────────────────────────────────────────────────
   float pcl_pwr_offset        = 53;   // Grid total power, W (negative = export)
+  float pow_get_sys_grid      = 515;  // System grid power, W
   float pow_get_sys_load      = 516;  // Home load power, W
   float pow_get_pv_sum        = 517;  // Total PV power, W (all strings combined)
   float pow_get_bp_cms        = 518;  // Battery/inverter power, W (positive = charging)
@@ -20,6 +21,17 @@ message OceanProStatus {
   // ── Generator ─────────────────────────────────────────────────────────────
   float pow_get_standby_generator  = 781;  // Standby generator power, W
   float pow_get_portable_generator = 782;  // Portable generator power, W
+
+  // ── Grid status ───────────────────────────────────────────────────────────
+  int32 grid_connection_sta   = 619;  // Grid connection status enum (PANEL_GRID_STA)
+  bool  grid_is_energized     = 752;  // Grid is energized
+
+  // ── Grid / EMS settings ───────────────────────────────────────────────────
+  int32 grid_chg_pow_max           = 1246; // Max grid charge power, W
+  int32 feed_grid_mode             = 520;  // Grid export mode
+  int32 feed_grid_mode_pow_limit   = 521;  // Grid export power limit, W
+  bool  grid_charge_to_battery_enable = 1686; // Grid-to-battery charging enabled
+  bool  storm_pattern_enable       = 467;  // Storm mode enabled
 
   // ── CMS Battery Management ───────────────────────────────────────────────
   float cms_batt_temp         = 102;  // Battery temperature, °C
@@ -40,6 +52,11 @@ message OceanProStatus {
   int32 cms_energy_in_sum     = 1275; // Cumulative energy charged, Wh
   int32 cms_batt_store_energy  = 1682; // Current stored energy, Wh
   int32 cms_batt_rated_energy  = 1685; // Rated battery capacity, Wh
+  int32 cms_batt_pow_out_max  = 459;  // Max battery discharge power, W
+  int32 cms_batt_pow_in_max   = 460;  // Max battery charge power, W
+  int32 backup_reverse_soc    = 461;  // Backup reserve SoC, %
+  int32 backup_soc_vpp        = 1560; // VPP backup SoC, %
+  bool  bms_batt_heating      = 1212; // Battery heating active
 
   // ── Grid phase measurements — split-phase US 240 V ────────────────────────
   float grid_vol_l1           = 1463; // Grid voltage phase L1, V
@@ -60,12 +77,25 @@ message OceanProStatus {
   float dt_pv7_pwr_current    = 1482; // PV string 7 power, W
   float dt_pv8_pwr_current    = 1483; // PV string 8 power, W
 
+  // ── EMS state ─────────────────────────────────────────────────────────────
+  int32 ems_fsmstate          = 1470; // EMS finite state machine state
+
   // ── Device temperatures ───────────────────────────────────────────────────
+  int32 inv_ntc_temp2         = 1469; // Inverter NTC temperature 2, °C
   float dev_temperature_1     = 1553; // Device temperature 1, °C
   float dev_temperature_2     = 1554; // Device temperature 2, °C
   float dev_temperature_3     = 1555; // Device temperature 3, °C (inverter)
   float dev_temperature_4     = 1556; // Device temperature 4, °C
   float dev_temperature_5     = 1557; // Device temperature 5, °C
+
+  // ── PCS (Power Conversion System) error / fault / warning codes ───────────
+  // All are int32 (transmitted as uint32); 0 = no fault.
+  // Field names preserved from DevAplComm.java (decompiled EcoFlow 6.11.0).
+  int32 dt_pcs_error_code           = 630;  // Generic PCS error code
+  int32 dt_pcs_waring_code          = 640;  // PCS warning code (sic — original typo)
+  int32 dt_pcs_grid_rule_fault_code = 1561; // Grid rule / policy fault code
+  int32 dt_pcs_other_fault_code     = 1564; // Other PCS fault code
+  int32 dt_pcs_isr_fault            = 1565; // ISR / insulation relay fault code
 }
 
 // pdata for cmd_func=254, cmd_id=25  (OceanPro short heartbeat)
@@ -73,4 +103,10 @@ message OceanProStatus {
 message OceanProSysInfo {
   float pv_pwr                = 21;   // Solar PV input power, W
   float sys_load_pwr          = 22;   // System load power, W
+}
+
+// pdata for cmd_func=254, cmd_id=17  (OceanPro config write / SET command)
+// Field numbers sourced from DevAplComm.java (decompiled EcoFlow 6.11.0 app).
+message OceanProConfigWrite {
+  bool cfg_manual_emergency_backup_switch = 580; // Emergency backup mode (charges battery to 100%)
 }

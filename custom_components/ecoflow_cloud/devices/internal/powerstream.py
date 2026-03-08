@@ -110,7 +110,7 @@ class PowerStreamCommandMessage(PrivateAPIMessageProtocol):
         message = self._packet.msg.add()
         message.seq = Message.gen_seq()
         message.device_sn = device_sn
-        message.from_ = "HomeAssistant"
+        message.from_ = "android"
 
         if command == Command.INVERTER_HEARTBEAT:
             message.src = AddressId.APP

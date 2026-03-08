@@ -25,9 +25,11 @@ message SmartPanel40Status {
   // ── System power ──────────────────────────────────────────────────────────
   float  pcl_pwr_offset           = 53;   // Total grid power, W (negative = export)
   string utc_timezone_id          = 134;  // Timezone string
+  float  pow_get_sys_grid         = 515;  // System grid power, W
   float  pow_get_sys_load         = 516;  // Total home load, W
   float  pow_get_pv_sum           = 517;  // Total PV power, W
   float  pow_get_bp_cms           = 518;  // Battery/inverter power, W (positive = charging)
+  float  pow_get_load_output_sum  = 1227; // Load output sum, W
 
   // ── Load source breakdown ─────────────────────────────────────────────────
   float  pow_get_sys_load_from_pv   = 1002; // Home load sourced from PV, W
