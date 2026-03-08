@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 from typing import Any, cast, override
 
 from google.protobuf.json_format import MessageToDict
@@ -24,14 +23,13 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.util import dt
 
 from custom_components.ecoflow_cloud.api import EcoflowApiClient
-from custom_components.ecoflow_cloud.api.message import JSONDict, Message, PrivateAPIMessageProtocol
+from custom_components.ecoflow_cloud.api.message import JSONDict
 from custom_components.ecoflow_cloud.binary_sensor import MiscBinarySensorEntity
 from custom_components.ecoflow_cloud.devices import BaseInternalDevice
 from custom_components.ecoflow_cloud.devices.data_holder import PreparedData
 from custom_components.ecoflow_cloud.devices.internal import flatten_dict
-from custom_components.ecoflow_cloud.devices.internal.proto import AddressId, ef_smartmeter_pb2
+from custom_components.ecoflow_cloud.devices.internal.proto import ef_smartmeter_pb2
 from custom_components.ecoflow_cloud.devices.internal.proto import ef_oceanpro_pb2
-from custom_components.ecoflow_cloud.switch import EnabledEntity
 from custom_components.ecoflow_cloud.sensor import (
     AmpSensorEntity,
     CelsiusSensorEntity,
@@ -52,43 +50,6 @@ _LOGGER = logging.getLogger(__name__)
 # OceanPro reports ~3–4 V on grid terminals during a grid fault instead of ~120 V.
 _GRID_FAULT_VOLTAGE_THRESHOLD = 50.0
 
-# cmd_func=32, cmd_id=177 battery-pack telemetry appears when Emergency backup is ON.
-# If no such message has been seen within this window (seconds), Emergency backup is OFF.
-_EMERGENCY_BACKUP_WINDOW_S = 120
-
-
-class OceanProCommandMessage(PrivateAPIMessageProtocol):
-    """Wraps a protobuf payload in a SmartMeterSetMessage envelope for OceanPro SET commands."""
-
-    def __init__(self, device_sn: str, cmd_func: int, cmd_id: int, payload: Any) -> None:
-        self._packet = ef_smartmeter_pb2.SmartMeterSetMessage()
-        message = self._packet.msg.add()
-        message.seq = Message.gen_seq()
-        message.device_sn = device_sn
-        message.from_ = "android"
-        message.src = AddressId.APP
-        message.dest = AddressId.MQTT
-        message.d_src = 1
-        message.d_dest = 1
-        message.check_type = 3
-        message.need_ack = 1
-        message.version = 19
-        message.payload_ver = 1
-        message.cmd_func = cmd_func
-        message.cmd_id = cmd_id
-        if payload is not None:
-            pdata = payload.SerializeToString()
-            message.pdata = pdata
-            message.data_len = len(pdata)
-
-    @override
-    def to_mqtt_payload(self) -> bytes:
-        return self._packet.SerializeToString()
-
-    @override
-    def to_dict(self) -> dict:
-        return MessageToDict(self._packet, preserving_proto_field_name=True)
-
 
 class _GridFaultBinarySensorEntity(MiscBinarySensorEntity):
     """Binary sensor: True when the measured grid voltage is abnormally low."""
@@ -104,18 +65,9 @@ class _GridFaultBinarySensorEntity(MiscBinarySensorEntity):
 _CMD_FUNC = 254
 _CMD_STATUS = 21    # long property-upload  (OceanProStatus)
 _CMD_SYSINFO = 25   # short heartbeat       (OceanProSysInfo)
-_CMD_CFGWRITE = 17  # config write / SET command
-
-# Battery-pack telemetry cmd that appears when Emergency backup is active
-_CMD_FUNC_BP = 32
-_CMD_ID_BP = 177
 
 
 class OceanPro(BaseInternalDevice):
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._last_emergency_heartbeat: float = 0.0
 
     @override
     def sensors(self, client: EcoflowApiClient) -> list[SensorEntity]:
@@ -368,23 +320,7 @@ class OceanPro(BaseInternalDevice):
         return []
 
     def switches(self, client: EcoflowApiClient) -> list[SwitchEntity]:
-        pf = f"{_CMD_FUNC}_{_CMD_STATUS}"
-
-        def _emergency_backup_command(val: int) -> Message:
-            payload = ef_oceanpro_pb2.OceanProConfigWrite()
-            payload.cfg_manual_emergency_backup_switch = bool(val)
-            return OceanProCommandMessage(
-                self.device_data.sn, _CMD_FUNC, _CMD_CFGWRITE, payload
-            )
-
-        return [
-            EnabledEntity(
-                client, self,
-                f"{pf}.emergencyBackupActive",
-                "Emergency Backup",
-                _emergency_backup_command,
-            ),
-        ]
+        return []
 
     def selects(self, client: EcoflowApiClient) -> list[SelectEntity]:
         return []
@@ -464,21 +400,12 @@ class OceanPro(BaseInternalDevice):
                     for k, v in flatten_dict(raw).items():
                         params[f"{prefix}.{k}"] = v
 
-                    # Inject Emergency backup state derived from BP heartbeat recency
-                    active = (time.monotonic() - self._last_emergency_heartbeat) < _EMERGENCY_BACKUP_WINDOW_S
-                    params[f"{prefix}.emergencyBackupActive"] = active
-
                 elif cmd_func == _CMD_FUNC and cmd_id == _CMD_SYSINFO:
                     payload = ef_oceanpro_pb2.OceanProSysInfo()
                     payload.ParseFromString(pdata)
                     raw = MessageToDict(payload, preserving_proto_field_name=False)
                     for k, v in flatten_dict(raw).items():
                         params[f"{prefix}.{k}"] = v
-
-                elif cmd_func == _CMD_FUNC_BP and cmd_id == _CMD_ID_BP:
-                    # Battery-pack telemetry: presence indicates Emergency backup is ON
-                    self._last_emergency_heartbeat = time.monotonic()
-                    params[f"{_CMD_FUNC}_{_CMD_STATUS}.emergencyBackupActive"] = True
 
                 else:
                     _LOGGER.debug("OceanPro: unhandled cmd_func=%s cmd_id=%s", cmd_func, cmd_id)
