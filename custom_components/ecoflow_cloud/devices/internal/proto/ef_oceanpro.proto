@@ -104,9 +104,3 @@ message OceanProSysInfo {
   float pv_pwr                = 21;   // Solar PV input power, W
   float sys_load_pwr          = 22;   // System load power, W
 }
-
-// pdata for cmd_func=254, cmd_id=17  (OceanPro config write / SET command)
-// Field numbers sourced from DevAplComm.java (decompiled EcoFlow 6.11.0 app).
-message OceanProConfigWrite {
-  bool cfg_manual_emergency_backup_switch = 580; // Emergency backup mode (charges battery to 100%)
-}

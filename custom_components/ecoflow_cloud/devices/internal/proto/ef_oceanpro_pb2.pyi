@@ -147,9 +147,3 @@ class OceanProSysInfo(_message.Message):
     pv_pwr: float
     sys_load_pwr: float
     def __init__(self, pv_pwr: _Optional[float] = ..., sys_load_pwr: _Optional[float] = ...) -> None: ...
-
-class OceanProConfigWrite(_message.Message):
-    __slots__ = ("cfg_manual_emergency_backup_switch",)
-    CFG_MANUAL_EMERGENCY_BACKUP_SWITCH_FIELD_NUMBER: _ClassVar[int]
-    cfg_manual_emergency_backup_switch: bool
-    def __init__(self, cfg_manual_emergency_backup_switch: bool = ...) -> None: ...
