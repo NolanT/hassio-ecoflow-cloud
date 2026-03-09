@@ -352,15 +352,29 @@ class OceanPro(BaseInternalDevice):
     def _status_sensor(self, client: EcoflowApiClient) -> QuotaStatusSensorEntity:
         return QuotaStatusSensorEntity(client, self)
 
-    @override
-    def _prepare_data_get_reply_topic(self, raw_data: bytes) -> PreparedData:
-        # get_reply carries a JSON acknowledgement, not a proto payload.
-        # Parsing it with the proto parser produces a spurious ERROR log.
+    def _json_prepared_data(self, raw_data: bytes) -> PreparedData:
+        """Parse JSON topic payload — set/get topics carry JSON, not proto."""
         try:
             data = json.loads(raw_data)
         except Exception:
             data = {}
         return PreparedData(None, None, data)
+
+    @override
+    def _prepare_data_set_topic(self, raw_data: bytes) -> PreparedData:
+        return self._json_prepared_data(raw_data)
+
+    @override
+    def _prepare_data_set_reply_topic(self, raw_data: bytes) -> PreparedData:
+        return self._json_prepared_data(raw_data)
+
+    @override
+    def _prepare_data_get_topic(self, raw_data: bytes) -> PreparedData:
+        return self._json_prepared_data(raw_data)
+
+    @override
+    def _prepare_data_get_reply_topic(self, raw_data: bytes) -> PreparedData:
+        return self._json_prepared_data(raw_data)
 
     @override
     def _prepare_data(self, raw_data: bytes) -> dict[str, Any]:
