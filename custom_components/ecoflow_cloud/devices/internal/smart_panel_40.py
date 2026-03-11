@@ -64,7 +64,13 @@ class SmartPanel40(BaseInternalDevice):
             # ── System power ─────────────────────────────────────────────────
             WattsSensorEntity(client, self, f"{pf}.powGetSysLoad", "Home Load").with_energy(),
             WattsSensorEntity(client, self, f"{pf}.powGetPvSum", "PV Power").with_energy(),
-            WattsSensorEntity(client, self, f"{pf}.powGetBpCms", "Battery Power").with_energy(),
+            # Battery power mirrored from OceanPro — SmartPanel40 sends device-native
+            # smoothing artifacts (exponential decay between real readings) making this
+            # unreliable. Use sensor.ocean_pro_battery_power instead.
+            WattsSensorEntity(
+                client, self, f"{pf}.powGetBpCms", "Battery Power",
+                enabled=False,
+            ),
             WattsSensorEntity(client, self, f"{pf}.powGetSysGrid", "System Grid Power").with_energy(),
             WattsSensorEntity(
                 client, self, f"{pf}.powGetLoadOutputSum", "Load Output Sum",
@@ -91,7 +97,12 @@ class SmartPanel40(BaseInternalDevice):
             ),
 
             # ── Battery (mirrored from OceanPro) ─────────────────────────────
-            MiscSensorEntity(client, self, f"{pf}.cmsBattStoreEnergy", "Stored Energy (Wh)"),
+            # cmsBattStoreEnergy (field 1682) is never transmitted by the SmartPanel40
+            # in practice — perpetually unknown. Use sensor.ocean_pro_stored_energy_wh.
+            MiscSensorEntity(
+                client, self, f"{pf}.cmsBattStoreEnergy", "Stored Energy (Wh)",
+                enabled=False,
+            ),
             SecondsRemainSensorEntity(
                 client, self, f"{pf}.cmsChgRemTime", "Charge Time Remaining",
                 enabled=False,
