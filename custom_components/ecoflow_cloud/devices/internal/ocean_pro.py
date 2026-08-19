@@ -22,12 +22,14 @@ Both devices are read-only: sensors only, no control entities.
 import logging
 from typing import Any, override
 
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.components.number import NumberEntity
 from homeassistant.components.select import SelectEntity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.switch import SwitchEntity
 
 from custom_components.ecoflow_cloud.api import EcoflowApiClient
+from custom_components.ecoflow_cloud.binary_sensor import MiscBinarySensorEntity
 from custom_components.ecoflow_cloud.devices.internal.delta_pro_3 import DeltaPro3
 from custom_components.ecoflow_cloud.devices.internal.smart_home_panel_3 import (
     WIRE_F32,
@@ -40,6 +42,7 @@ from custom_components.ecoflow_cloud.devices.internal.smart_home_panel_3 import 
 )
 from custom_components.ecoflow_cloud.sensor import (
     QuotaStatusSensorEntity,
+    RemainSensorEntity,
     SolarPowerSensorEntity,
     WattsSensorEntity,
 )
@@ -67,6 +70,10 @@ PV_MAX_W = 5_500  # per-string MPPT ceiling; anything above is field-reuse noise
 # Inverter AC output (PCS total active power), 254/21 field 53, signed
 # (negative = production/export).
 F_PCS_TOTAL = 53
+
+# Grid energized flag, 254/21 field 752, varint. The app raises its own grid
+# outage banner off this field, so it is the authoritative loss-of-grid signal.
+F_GRID_ENERGIZED = 752
 
 # Battery power is reported per pack in separate cmdFunc=32 / cmdId=177 frames:
 # field 44 = bp_power (W, signed: positive = charging, negative = discharging;
@@ -124,6 +131,7 @@ class OceanProInverter(DeltaPro3):
             WattsSensorEntity(client, self, "ocean_pcs_pwr", "Inverter Output Power").with_icon("mdi:sine-wave"),
             # Pack-reported battery power (signed: + charge / - discharge).
             WattsSensorEntity(client, self, "ocean_batt_pwr", "Battery Power").with_icon("mdi:home-battery"),
+            RemainSensorEntity(client, self, "cms_dsg_rem_time", "Discharge Remaining Time"),
             QuotaStatusSensorEntity(client, self),
         ]
         # PV strings: per-string production power with integrated energy (kWh,
@@ -131,6 +139,12 @@ class OceanProInverter(DeltaPro3):
         for i in range(1, PV_STRINGS + 1):
             out.append(SolarPowerSensorEntity(client, self, f"pv{i}_pwr", f"PV{i} Power").with_energy())
         return out
+
+    @override
+    def binary_sensors(self, client: EcoflowApiClient) -> list[BinarySensorEntity]:
+        return [
+            MiscBinarySensorEntity(client, self, "ocean_grid_energized", "Grid Energized"),
+        ]
 
     @override
     def numbers(self, client: EcoflowApiClient) -> list[NumberEntity]:
@@ -153,6 +167,7 @@ class OceanProInverter(DeltaPro3):
                 fields = _parse_fields(pdata)
                 self._decode_pv(fields, result)
                 self._decode_pcs(fields, result)
+                self._decode_grid_energized(fields, result)
             elif cmd == BATTERY_PACK_CMD:
                 self._decode_battery(_parse_fields(pdata), result)
         except Exception as e:  # reverse-engineered payload; never break the base decode
@@ -172,6 +187,13 @@ class OceanProInverter(DeltaPro3):
         v = _first(fields, F_PCS_TOTAL, WIRE_F32)
         if v is not None:
             result["ocean_pcs_pwr"] = round(v, 2)
+
+    def _decode_grid_energized(self, fields: FieldMap, result: dict[str, Any]) -> None:
+        """Grid energized flag, field 752."""
+        v = _first(fields, F_GRID_ENERGIZED, WIRE_VARINT)
+        # Reject field-number reuse from nested submessages (not a bool).
+        if v is not None and v in (0, 1):
+            result["ocean_grid_energized"] = bool(v)
 
     def _decode_battery(self, fields: FieldMap, result: dict[str, Any]) -> None:
         """Pack-reported battery power, summed across slots (cmdFunc 32 / cmdId 177)."""
