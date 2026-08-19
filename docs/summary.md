@@ -1068,12 +1068,13 @@
 
 </p></details>
 
-<details><summary> OCEAN_PRO <i>(sensors: 11)</i> </summary>
+<details><summary> OCEAN_PRO <i>(sensors: 12, binary_sensors: 1)</i> </summary>
 <p>
 
 *Sensors*
 - Inverter Output Power
 - Battery Power
+- Discharge Remaining Time
 - Status
 - PV1 Power (energy:  _[Device Name]_ PV1  Energy)
 - PV2 Power (energy:  _[Device Name]_ PV2  Energy)
@@ -1083,6 +1084,9 @@
 - PV6 Power (energy:  _[Device Name]_ PV6  Energy)
 - PV7 Power (energy:  _[Device Name]_ PV7  Energy)
 - PV8 Power (energy:  _[Device Name]_ PV8  Energy)
+
+*Binary sensors*
+- Grid Energized
 
 </p></details>
 
