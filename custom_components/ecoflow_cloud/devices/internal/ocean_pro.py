@@ -33,7 +33,6 @@ from custom_components.ecoflow_cloud.binary_sensor import MiscBinarySensorEntity
 from custom_components.ecoflow_cloud.devices.internal.delta_pro_3 import DeltaPro3
 from custom_components.ecoflow_cloud.devices.internal.smart_home_panel_3 import (
     WIRE_F32,
-    WIRE_F64,
     WIRE_VARINT,
     FieldMap,
     SmartHomePanel3,
@@ -75,28 +74,12 @@ F_PCS_TOTAL = 53
 # outage banner off this field, so it is the authoritative loss-of-grid signal.
 F_GRID_ENERGIZED = 752
 
-# Battery power is reported per pack in separate cmdFunc=32 / cmdId=177 frames:
-# field 44 = bp_power (W, signed: positive = charging, negative = discharging;
-# confirmed vs SoC direction, n=760), field 5 = pack slot index. Power adds
-# across packs, so track the last value per slot and sum.
-BATTERY_PACK_CMD = (32, 177)  # (cmdFunc, cmdId)
-F_BATT_SLOT = 5
-F_BATT_PWR = 44
-# field 44 usually carries a sane per-pack power (watts), but intermittently
-# emits an implausible spike (tens to hundreds of kW for a single pack) that the
-# per-slot sum then amplifies. Reject any read beyond a pack's realistic share of
-# the inverter's rating (~24 kW / 4 packs, with generous headroom) as decode
-# noise, and keep the slot's last good value — same guard used for PV strings.
-BATT_PACK_MAX_W = 10_000
-
-
-def _first_num(fields: FieldMap, no: int) -> float | None:
-    """First numeric value of a field regardless of wire type (varint or float)."""
-    for wt in (WIRE_F32, WIRE_VARINT, WIRE_F64):
-        v = _first(fields, no, wt)
-        if v is not None:
-            return float(v)
-    return None
+# Combined battery power, 254/21 field 518 (pow_get_bp_cms), F32 watts, signed
+# (positive = charging). The app maps this same field straight to its own
+# batteryPower for this device. A single total for the whole pack stack, so it
+# needs no cross-frame accumulation.
+F_BATT_PWR = 518
+BATT_MAX_W = 30_000  # beyond the 24 kW inverter rating; above this is field-reuse noise
 
 
 class OceanPanel(SmartHomePanel3):
@@ -116,20 +99,15 @@ class OceanProInverter(DeltaPro3):
 
     Shares the Delta Pro 3 254/21 decode pipeline (and its battery SoC), and
     adds the solar/battery side unique to Ocean Pro: PV strings pv1..pv8, the
-    inverter AC output, and pack-reported battery power.
+    inverter AC output, and combined battery power.
     """
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        # Last-seen battery power per pack slot, summed into total battery power.
-        self._pack_pwr: dict[int, float] = {}
 
     @override
     def sensors(self, client: EcoflowApiClient) -> list[SensorEntity]:
         out: list[SensorEntity] = [
             # Inverter AC output; sign follows production (negative = export).
             WattsSensorEntity(client, self, "ocean_pcs_pwr", "Inverter Output Power").with_icon("mdi:sine-wave"),
-            # Pack-reported battery power (signed: + charge / - discharge).
+            # Combined battery power (signed: + charge / - discharge).
             WattsSensorEntity(client, self, "ocean_batt_pwr", "Battery Power").with_icon("mdi:home-battery"),
             RemainSensorEntity(client, self, "cms_dsg_rem_time", "Discharge Remaining Time"),
             QuotaStatusSensorEntity(client, self),
@@ -168,8 +146,7 @@ class OceanProInverter(DeltaPro3):
                 self._decode_pv(fields, result)
                 self._decode_pcs(fields, result)
                 self._decode_grid_energized(fields, result)
-            elif cmd == BATTERY_PACK_CMD:
-                self._decode_battery(_parse_fields(pdata), result)
+                self._decode_battery(fields, result)
         except Exception as e:  # reverse-engineered payload; never break the base decode
             _LOGGER.debug("Ocean Pro inverter field parse skipped: %s", e)
         return result
@@ -196,12 +173,8 @@ class OceanProInverter(DeltaPro3):
             result["ocean_grid_energized"] = bool(v)
 
     def _decode_battery(self, fields: FieldMap, result: dict[str, Any]) -> None:
-        """Pack-reported battery power, summed across slots (cmdFunc 32 / cmdId 177)."""
-        pwr = _first_num(fields, F_BATT_PWR)
-        # Missing, or an implausible spike (field-44 decode noise) — keep the
-        # last good per-slot values rather than poisoning the sum.
-        if pwr is None or abs(pwr) > BATT_PACK_MAX_W:
-            return
-        slot = _first_num(fields, F_BATT_SLOT)
-        self._pack_pwr[int(slot) if slot is not None else 0] = round(pwr, 2)
-        result["ocean_batt_pwr"] = round(sum(self._pack_pwr.values()), 2)
+        """Combined battery power, field 518."""
+        v = _first(fields, F_BATT_PWR, WIRE_F32)
+        # Reject field-number reuse from nested submessages (out-of-range).
+        if v is not None and abs(v) <= BATT_MAX_W:
+            result["ocean_batt_pwr"] = round(v, 2)
