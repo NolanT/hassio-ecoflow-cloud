@@ -25,15 +25,18 @@ import time
 from collections.abc import Iterator
 from typing import Any, override
 
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.components.number import NumberEntity
 from homeassistant.components.select import SelectEntity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.switch import SwitchEntity
 
 from custom_components.ecoflow_cloud.api import EcoflowApiClient
+from custom_components.ecoflow_cloud.binary_sensor import MiscBinarySensorEntity
 from custom_components.ecoflow_cloud.devices.internal.delta_pro_3 import DeltaPro3
 from custom_components.ecoflow_cloud.devices.internal.smart_home_panel_3 import (
     WIRE_F32,
+    WIRE_VARINT,
     FieldMap,
     SmartHomePanel3,
     _first,
@@ -48,6 +51,7 @@ from custom_components.ecoflow_cloud.sensor import (
     OutWattsSensorEntity,
     QuotaScheduledStatusSensorEntity,
     QuotaStatusSensorEntity,
+    RemainSensorEntity,
     SolarPowerSensorEntity,
     TempSensorEntity,
     VoltSensorEntity,
@@ -134,6 +138,10 @@ PCS_P_MAX = 20_000.0  # per-leg magnitude ceiling; abs above this is reuse noise
 #   changes), daytime frames without string fields dropped solar entirely, and an idle
 #   battery showed conversion residue instead of 0.
 F_BATT_PWR = 518
+
+# Grid energized flag, 254/21 field 752, varint. The app raises its own grid
+# outage banner off this field, so it is the authoritative loss-of-grid signal.
+F_GRID_ENERGIZED = 752
 BATT_P_MAX = 30_000.0  # bank charge/discharge peaks ~21 kW; abs above this is reuse noise
 
 # --- Battery pack: decoded the mini collector's PROVEN way ------------------
@@ -468,6 +476,9 @@ class OceanProInverter(DeltaPro3):
             # Battery power, the inverter's own figure (254/21 field 518, signed:
             # + charge / - discharge). See F_BATT_PWR.
             WattsSensorEntity(client, self, "ocean_batt_pwr", "Battery Power").with_icon("mdi:home-battery"),
+            # Remaining discharge time (field 268, decoded by the shared DP3 parse) — shown in the
+            # app's grid-outage popup next to Grid Energized.
+            RemainSensorEntity(client, self, "cms_dsg_rem_time", "Discharge Remaining Time"),
             # Per-leg AC (PCS phase A/B): voltage, current and active power. Same 254/21
             # stream as PV/PCS-total — the split-phase voltage HA otherwise lacks entirely.
             VoltSensorEntity(client, self, "pcsA_voltage", "PCS Phase A Voltage").with_icon("mdi:sine-wave"),
@@ -522,6 +533,12 @@ class OceanProInverter(DeltaPro3):
             out.append(VoltSensorEntity(client, self, f"pv{i}_vol", f"PV{i} Voltage", enabled=False, diagnostic=True).with_icon("mdi:solar-panel"))
             out.append(AmpSensorEntity(client, self, f"pv{i}_amp", f"PV{i} Current", enabled=False, diagnostic=True))
         return out
+
+    @override
+    def binary_sensors(self, client: EcoflowApiClient) -> list[BinarySensorEntity]:
+        return [
+            MiscBinarySensorEntity(client, self, "ocean_grid_energized", "Grid Energized"),
+        ]
 
     @override
     def numbers(self, client: EcoflowApiClient) -> list[NumberEntity]:
@@ -635,6 +652,7 @@ class OceanProInverter(DeltaPro3):
                 self._decode_pcs_legs(fields, result)
                 self._decode_dev_temps(fields, result)
                 self._decode_battery_power(fields, result)
+                self._decode_grid_energized(fields, result)
         except Exception as e:  # reverse-engineered payload; never break the base decode
             _LOGGER.debug("Ocean Pro inverter field parse skipped: %s", e)
         return result
@@ -693,6 +711,13 @@ class OceanProInverter(DeltaPro3):
         v = _first(fields, F_BATT_PWR, WIRE_F32)
         if v is not None and abs(v) <= BATT_P_MAX:
             result["ocean_batt_pwr"] = round(v, 2)
+
+    def _decode_grid_energized(self, fields: FieldMap, result: dict[str, Any]) -> None:
+        """Grid energized flag, field 752."""
+        v = _first(fields, F_GRID_ENERGIZED, WIRE_VARINT)
+        # Reject field-number reuse from nested submessages (not a bool).
+        if v is not None and v in (0, 1):
+            result["ocean_grid_energized"] = bool(v)
 
     def _decode_battery_pack(self, flat: dict[str, Any], params: dict[str, Any]) -> bool:
         """Bank rollup from the per-pack 32/177 stream (one pack per message).

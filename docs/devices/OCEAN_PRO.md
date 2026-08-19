@@ -8,6 +8,7 @@
 - Battery Packs Online (`bp_packs`)   _(disabled)_
 - Battery Pack Current (raw) (`bp_current_raw`)   _(disabled)_
 - Battery Power (`ocean_batt_pwr`)
+- Discharge Remaining Time (`cms_dsg_rem_time`)
 - PCS Phase A Voltage (`pcsA_voltage`)
 - PCS Phase A Current (`pcsA_current`)
 - PCS Phase A Power (`pcsA_power`)
@@ -73,5 +74,8 @@
 - PV7 Current (`pv7_amp`)   _(disabled)_
 - PV8 Voltage (`pv8_vol`)   _(disabled)_
 - PV8 Current (`pv8_amp`)   _(disabled)_
+
+*Binary sensors*
+- Grid Energized (`ocean_grid_energized`)
 
 

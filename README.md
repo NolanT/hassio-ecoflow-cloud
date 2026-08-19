@@ -1346,7 +1346,7 @@ from Home Assistant.
 
 </p></details>
 
-<details><summary> OCEAN_PRO <i>(sensors: 72)</i> </summary>
+<details><summary> OCEAN_PRO <i>(sensors: 73, binary_sensors: 1)</i> </summary>
 <p>
 
 *Sensors*
@@ -1357,6 +1357,7 @@ from Home Assistant.
 - Battery Packs Online  _(disabled)_
 - Battery Pack Current (raw)  _(disabled)_
 - Battery Power
+- Discharge Remaining Time
 - PCS Phase A Voltage
 - PCS Phase A Current
 - PCS Phase A Power
@@ -1422,6 +1423,9 @@ from Home Assistant.
 - PV7 Current  _(disabled)_
 - PV8 Voltage  _(disabled)_
 - PV8 Current  _(disabled)_
+
+*Binary sensors*
+- Grid Energized
 
 </p></details>
 
